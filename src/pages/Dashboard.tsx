@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,11 +7,14 @@ import { Heart, MessageCircle, Users, Calendar, ArrowRight, User, LogOut } from 
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
-  const { profile, family, familyMembers, loading } = useProfile();
+  const { profile, family, familyMembers, loading, createFamily } = useProfile();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isCreatingFamily, setIsCreatingFamily] = useState(false);
 
   useEffect(() => {
     if (!user && !loading) {
@@ -23,6 +25,35 @@ const Dashboard = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const handleCreateFamily = async () => {
+    setIsCreatingFamily(true);
+    
+    try {
+      const { error } = await createFamily();
+      
+      if (error) {
+        toast({
+          title: "Error Creating Family",
+          description: error,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Family Created Successfully!",
+          description: "Your family has been created. Share your family code with your child.",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Unexpected Error",
+        description: "Something went wrong while creating your family.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingFamily(false);
+    }
   };
 
   if (loading || !profile) {
@@ -86,8 +117,12 @@ const Dashboard = () => {
                   <p className="text-gray-600 mb-4">
                     You haven't created your family yet. Once you do, you'll get a family code to share with your child.
                   </p>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    Create Family
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={handleCreateFamily}
+                    disabled={isCreatingFamily}
+                  >
+                    {isCreatingFamily ? "Creating Family..." : "Create Family"}
                   </Button>
                 </div>
               ) : (
