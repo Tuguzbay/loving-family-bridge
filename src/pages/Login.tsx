@@ -6,33 +6,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Heart, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 
 const Login = () => {
   const [formData, setFormData] = useState({
     email: "",
     password: ""
   });
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { signIn, user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    // Simulate successful login
-    toast({
-      title: "Welcome back!",
-      description: "Successfully signed in to your FamilyConnect account.",
-    });
-
-    // Navigate to dashboard
-    setTimeout(() => {
+    const { error } = await signIn(formData.email, formData.password);
+    
+    if (!error) {
       navigate("/dashboard");
-    }, 1000);
+    }
+    
+    setIsLoading(false);
   };
 
   return (
@@ -83,8 +89,12 @@ const Login = () => {
                 />
               </div>
 
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-                Sign In
+              <Button 
+                type="submit" 
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing In..." : "Sign In"}
               </Button>
 
               <div className="text-center space-y-2">

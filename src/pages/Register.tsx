@@ -7,7 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Heart, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 const Register = () => {
   const [step, setStep] = useState(1);
@@ -20,8 +23,17 @@ const Register = () => {
     parentEmail: "",
     familyCode: ""
   });
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { signUp, user } = useAuth();
+  const { joinFamily, createFamily } = useProfile();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
 
   const handleUserTypeSelect = (type: string) => {
     setUserType(type);
@@ -32,21 +44,73 @@ const Register = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    // Simulate successful registration
-    toast({
-      title: "Registration Successful!",
-      description: userType === "parent" 
-        ? "Your family code is: FAM-2024-CONNECT. Share this with your child to link accounts."
-        : "Account created! You'll be connected to your parent's family.",
-    });
+    try {
+      // Prepare user metadata
+      const userData = {
+        full_name: formData.name,
+        user_type: userType,
+        age: formData.age ? parseInt(formData.age) : null
+      };
 
-    // Navigate to dashboard after successful registration
-    setTimeout(() => {
-      navigate("/dashboard");
-    }, 2000);
+      // Sign up user
+      const { error: signUpError } = await signUp(formData.email, formData.password, userData);
+      
+      if (signUpError) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Wait a moment for the user to be created and profile trigger to run
+      setTimeout(async () => {
+        try {
+          if (userType === "parent") {
+            // Create family for parent
+            const { error: familyError } = await createFamily();
+            if (familyError) {
+              toast({
+                title: "Family Creation Error",
+                description: familyError,
+                variant: "destructive"
+              });
+            } else {
+              toast({
+                title: "Registration Successful!",
+                description: "Your family has been created. You'll receive a family code to share with your child.",
+              });
+            }
+          } else {
+            // Join family for child
+            if (formData.familyCode) {
+              const { error: joinError } = await joinFamily(formData.familyCode);
+              if (joinError) {
+                toast({
+                  title: "Family Join Error",
+                  description: joinError,
+                  variant: "destructive"
+                });
+              } else {
+                toast({
+                  title: "Registration Successful!",
+                  description: "You've been added to your family!",
+                });
+              }
+            }
+          }
+          
+          navigate("/dashboard");
+        } catch (error) {
+          console.error('Post-signup error:', error);
+        }
+      }, 2000);
+
+    } catch (error) {
+      console.error('Registration error:', error);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -189,8 +253,15 @@ const Register = () => {
                   </>
                 )}
 
-                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-                  {userType === "parent" ? "Create Family Account" : "Join Family"}
+                <Button 
+                  type="submit" 
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  disabled={isLoading}
+                >
+                  {isLoading 
+                    ? "Creating Account..." 
+                    : userType === "parent" ? "Create Family Account" : "Join Family"
+                  }
                 </Button>
 
                 <Button
