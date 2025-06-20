@@ -241,6 +241,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      is_family_member: {
+        Args: { family_id_param: string; user_id_param: string }
+        Returns: boolean
+      }
+      is_family_owner: {
+        Args: { family_id_param: string; user_id_param: string }
+        Returns: boolean
+      }
     }
     Enums: {
       conversation_status: "pending" | "in_progress" | "completed"
