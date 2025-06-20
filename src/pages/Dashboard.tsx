@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { FamilyCodeInput } from "@/components/FamilyCodeInput";
+import { ParentChildConversation } from "@/components/ParentChildConversation";
+import type { Profile } from "@/types/profile";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();

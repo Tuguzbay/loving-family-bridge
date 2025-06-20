@@ -292,6 +292,64 @@ export type Database = {
           },
         ]
       }
+      parent_child_assessments: {
+        Row: {
+          ai_analysis: Json | null
+          child_id: string
+          child_responses: Json
+          created_at: string
+          family_id: string
+          id: string
+          parent_id: string
+          parent_responses: Json
+          updated_at: string
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          child_id: string
+          child_responses: Json
+          created_at?: string
+          family_id: string
+          id?: string
+          parent_id: string
+          parent_responses: Json
+          updated_at?: string
+        }
+        Update: {
+          ai_analysis?: Json | null
+          child_id?: string
+          child_responses?: Json
+          created_at?: string
+          family_id?: string
+          id?: string
+          parent_id?: string
+          parent_responses?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_child_assessments_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_child_assessments_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_child_assessments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           age: number | null

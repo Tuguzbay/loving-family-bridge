@@ -30,3 +30,23 @@ export interface ConversationCompletion {
   completed_at: string;
   total_questions: number;
 }
+
+export interface ParentChildAssessment {
+  id: string;
+  family_id: string;
+  parent_id: string;
+  child_id: string;
+  parent_responses: {
+    short: string[];
+    long: string[];
+  };
+  child_responses: {
+    short: string[];
+    long: string[];
+  };
+  ai_analysis?: {
+    analysis: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
