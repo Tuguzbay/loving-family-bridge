@@ -218,7 +218,7 @@ export const useProfile = () => {
       console.log('Family found:', memberData.families);
       setFamily(memberData.families as Family);
       
-      // Fetch all family members with profiles - Updated query to ensure all members are fetched
+      // Fetch all family members with profiles
       const { data: allMembers, error: allMembersError } = await supabase
         .from('family_members')
         .select(`
@@ -345,12 +345,23 @@ export const useProfile = () => {
     console.log('User ID:', user.id);
 
     try {
-      // Find family by code - using trim() to handle any whitespace
+      // Find family by code - first try without any RLS constraints by using a service role query
+      // Let's try a different approach - query all families first to debug
+      console.log('Querying all families to debug RLS...');
+      const { data: allFamiliesDebug, error: debugError } = await supabase
+        .from('families')
+        .select('*');
+      
+      console.log('All families query result:', { data: allFamiliesDebug, error: debugError });
+
+      // Now try to find the specific family
       const { data: familyData, error: familyError } = await supabase
         .from('families')
         .select('*')
         .eq('family_code', familyCode.trim())
         .maybeSingle();
+
+      console.log('Family lookup result:', { data: familyData, error: familyError });
 
       if (familyError) {
         console.error('Error finding family:', familyError);
@@ -359,17 +370,7 @@ export const useProfile = () => {
 
       if (!familyData) {
         console.error('No family found with code:', familyCode);
-        
-        // Debug: Let's check all families to see what codes exist
-        const { data: allFamilies, error: debugError } = await supabase
-          .from('families')
-          .select('family_code');
-        
-        if (!debugError) {
-          console.log('All existing family codes:', allFamilies?.map(f => f.family_code));
-        }
-        
-        return { error: 'Invalid family code' };
+        return { error: 'Invalid family code - no family found' };
       }
 
       console.log('Family found:', familyData);
