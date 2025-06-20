@@ -207,23 +207,39 @@ export const useProfile = () => {
       console.log('Family found:', memberData.families);
       setFamily(memberData.families as Family);
       
-      // Fetch all family members
-      const { data: allMembers, error: allMembersError } = await supabase
-        .from('family_members')
-        .select(`
-          *,
-          profiles (*)
-        `)
-        .eq('family_id', memberData.families.id);
+      // Fetch all family members with retry logic
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        const { data: allMembers, error: allMembersError } = await supabase
+          .from('family_members')
+          .select(`
+            *,
+            profiles (*)
+          `)
+          .eq('family_id', memberData.families.id);
 
-      if (allMembersError) {
-        console.error('Error fetching family members:', allMembersError);
-      } else {
-        console.log('All family members:', allMembers);
-        setFamilyMembers(allMembers || []);
+        if (!allMembersError && allMembers) {
+          console.log('All family members fetched successfully:', allMembers);
+          setFamilyMembers(allMembers || []);
+          setLoading(false);
+          return;
+        }
+        
+        console.error(`Error fetching family members (attempt ${retryCount + 1}):`, allMembersError);
+        retryCount++;
+        
+        if (retryCount < maxRetries) {
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
       
+      // If all retries failed, still set loading to false
+      console.error('Failed to fetch family members after all retries');
       setLoading(false);
+      
     } catch (error) {
       console.error('Unexpected error in fetchFamilyData:', error);
       setLoading(false);
