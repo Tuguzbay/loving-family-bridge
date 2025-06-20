@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
-  const { profile, family, familyMembers, loading, createFamily } = useProfile();
+  const { profile, family, familyMembers, conversationCompletion, loading, createFamily } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isCreatingFamily, setIsCreatingFamily] = useState(false);
@@ -71,6 +71,8 @@ const Dashboard = () => {
   const otherFamilyMembers = familyMembers.filter(member => member.user_id !== user?.id);
   const isChild = profile.user_type === 'child';
   const isParent = profile.user_type === 'parent';
+  const hasCompletedConversation = !!conversationCompletion;
+  const conversationProgress = hasCompletedConversation ? 100 : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -193,7 +195,7 @@ const Dashboard = () => {
                   <Calendar className="h-4 w-4 text-purple-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-gray-800">0%</div>
+                  <div className="text-2xl font-bold text-gray-800">{conversationProgress}%</div>
                   <p className="text-xs text-gray-500 mt-2">
                     Conversation progress
                   </p>
@@ -217,43 +219,55 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className={`border rounded-lg p-4 ${isChild ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                  <div className={`border rounded-lg p-4 ${hasCompletedConversation ? 'bg-green-50' : (isChild ? 'bg-purple-50' : 'bg-blue-50')}`}>
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="font-semibold text-gray-800">
                         {isChild ? "Family Assessment" : "Initial Family Assessment"}
                       </h3>
-                      <Badge variant="secondary" className={`${isChild ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                        Ready to Start
+                      <Badge variant="secondary" className={`${hasCompletedConversation ? 'bg-green-100 text-green-800' : (isChild ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800')}`}>
+                        {hasCompletedConversation ? 'Completed' : 'Ready to Start'}
                       </Badge>
                     </div>
                     <p className="text-gray-600 text-sm mb-3">
-                      {isChild 
-                        ? "Share your thoughts to help our AI understand your family better."
-                        : "Complete the guided conversation to help our AI understand your family dynamics."
-                      }
+                      {hasCompletedConversation ? (
+                        isChild 
+                          ? "Great job! You've completed your family assessment."
+                          : "Assessment completed successfully."
+                      ) : (
+                        isChild 
+                          ? "Share your thoughts to help our AI understand your family better."
+                          : "Complete the guided conversation to help our AI understand your family dynamics."
+                      )}
                     </p>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">Not started</span>
-                      <Link to="/conversation">
-                        <Button size="sm" className={`${isChild ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                          Start Conversation
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </Link>
+                      <span className="text-sm text-gray-500">
+                        {hasCompletedConversation ? `Completed ${new Date(conversationCompletion.completed_at).toLocaleDateString()}` : 'Not started'}
+                      </span>
+                      {!hasCompletedConversation && (
+                        <Link to="/conversation">
+                          <Button size="sm" className={`${isChild ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                            Start Conversation
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </Link>
+                      )}
                     </div>
                   </div>
 
-                  <div className="border rounded-lg p-4 bg-gray-50 opacity-60">
+                  <div className={`border rounded-lg p-4 ${hasCompletedConversation ? 'bg-blue-50' : 'bg-gray-50 opacity-60'}`}>
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-gray-600">
+                      <h3 className={`font-semibold ${hasCompletedConversation ? 'text-gray-800' : 'text-gray-600'}`}>
                         {isChild ? "Private Insights" : "Private Insights Session"}
                       </h3>
-                      <Badge variant="outline" className="border-gray-300 text-gray-500">
-                        Locked
+                      <Badge variant="outline" className={`${hasCompletedConversation ? 'border-blue-300 text-blue-700' : 'border-gray-300 text-gray-500'}`}>
+                        {hasCompletedConversation ? 'Available' : 'Locked'}
                       </Badge>
                     </div>
-                    <p className="text-gray-500 text-sm">
-                      Available after completing the initial assessment.
+                    <p className={`text-sm ${hasCompletedConversation ? 'text-gray-600' : 'text-gray-500'}`}>
+                      {hasCompletedConversation 
+                        ? 'View personalized insights based on your assessment.'
+                        : 'Available after completing the initial assessment.'
+                      }
                     </p>
                   </div>
                 </CardContent>
@@ -273,7 +287,7 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {otherFamilyMembers.map((member) => (
+                  {familyMembers.map((member) => (
                     <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg bg-green-50">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -284,6 +298,7 @@ const Dashboard = () => {
                           <p className="text-sm text-gray-600">
                             {member.profiles.age && `${member.profiles.age} years old • `}
                             {member.profiles.user_type === 'parent' ? 'Parent' : 'Child'}
+                            {member.user_id === user?.id && ' (You)'}
                           </p>
                         </div>
                       </div>
@@ -293,7 +308,7 @@ const Dashboard = () => {
                     </div>
                   ))}
 
-                  {otherFamilyMembers.length === 0 && (
+                  {familyMembers.length === 1 && (
                     <div className="text-center p-4 border-2 border-dashed border-gray-300 rounded-lg">
                       <p className="text-gray-500 mb-2">
                         {isChild ? "Waiting for other family members" : "No other family members yet"}
@@ -325,13 +340,20 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-3 gap-4">
-                  <Link to="/conversation">
-                    <Button variant="outline" className="h-20 flex-col space-y-2 w-full">
-                      <MessageCircle className={`h-6 w-6 ${isChild ? 'text-purple-600' : 'text-blue-600'}`} />
-                      <span>{isChild ? "Start Chatting" : "Start Conversation"}</span>
+                  {!hasCompletedConversation ? (
+                    <Link to="/conversation">
+                      <Button variant="outline" className="h-20 flex-col space-y-2 w-full">
+                        <MessageCircle className={`h-6 w-6 ${isChild ? 'text-purple-600' : 'text-blue-600'}`} />
+                        <span>{isChild ? "Start Chatting" : "Start Conversation"}</span>
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Button variant="outline" className="h-20 flex-col space-y-2" disabled>
+                      <MessageCircle className="h-6 w-6 text-green-600" />
+                      <span>Assessment Complete</span>
                     </Button>
-                  </Link>
-                  <Button variant="outline" className="h-20 flex-col space-y-2" disabled>
+                  )}
+                  <Button variant="outline" className="h-20 flex-col space-y-2" disabled={!hasCompletedConversation}>
                     <Heart className="h-6 w-6 text-red-500" />
                     <span>{isChild ? "Family Insights" : "View Insights"}</span>
                   </Button>

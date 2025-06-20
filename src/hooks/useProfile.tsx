@@ -26,11 +26,20 @@ interface FamilyMember {
   profiles: Profile;
 }
 
+interface ConversationCompletion {
+  id: string;
+  user_id: string;
+  family_id: string;
+  completed_at: string;
+  total_questions: number;
+}
+
 export const useProfile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [family, setFamily] = useState<Family | null>(null);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [conversationCompletion, setConversationCompletion] = useState<ConversationCompletion | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,6 +52,7 @@ export const useProfile = () => {
       setProfile(null);
       setFamily(null);
       setFamilyMembers([]);
+      setConversationCompletion(null);
       setLoading(false);
     }
   }, [user]);
@@ -207,43 +217,50 @@ export const useProfile = () => {
       console.log('Family found:', memberData.families);
       setFamily(memberData.families as Family);
       
-      // Fetch all family members with retry logic
-      let retryCount = 0;
-      const maxRetries = 3;
-      
-      while (retryCount < maxRetries) {
-        const { data: allMembers, error: allMembersError } = await supabase
-          .from('family_members')
-          .select(`
-            *,
-            profiles (*)
-          `)
-          .eq('family_id', memberData.families.id);
+      // Fetch all family members with profiles
+      const { data: allMembers, error: allMembersError } = await supabase
+        .from('family_members')
+        .select(`
+          *,
+          profiles (*)
+        `)
+        .eq('family_id', memberData.families.id);
 
-        if (!allMembersError && allMembers) {
-          console.log('All family members fetched successfully:', allMembers);
-          setFamilyMembers(allMembers || []);
-          setLoading(false);
-          return;
-        }
-        
-        console.error(`Error fetching family members (attempt ${retryCount + 1}):`, allMembersError);
-        retryCount++;
-        
-        if (retryCount < maxRetries) {
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+      if (allMembersError) {
+        console.error('Error fetching family members:', allMembersError);
+      } else {
+        console.log('All family members fetched successfully:', allMembers);
+        setFamilyMembers(allMembers || []);
       }
       
-      // If all retries failed, still set loading to false
-      console.error('Failed to fetch family members after all retries');
+      // Fetch conversation completion status
+      await fetchConversationCompletion(memberData.families.id);
+      
       setLoading(false);
       
     } catch (error) {
       console.error('Unexpected error in fetchFamilyData:', error);
       setLoading(false);
     }
+  };
+
+  const fetchConversationCompletion = async (familyId: string) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('conversation_completions')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('family_id', familyId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching conversation completion:', error);
+      return;
+    }
+
+    console.log('Conversation completion status:', data);
+    setConversationCompletion(data);
   };
 
   const createFamily = async () => {
@@ -380,6 +397,7 @@ export const useProfile = () => {
     profile,
     family,
     familyMembers,
+    conversationCompletion,
     loading,
     createFamily,
     joinFamily,

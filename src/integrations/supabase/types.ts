@@ -9,6 +9,93 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      conversation_completions: {
+        Row: {
+          completed_at: string
+          family_id: string
+          id: string
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          family_id: string
+          id?: string
+          total_questions?: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          family_id?: string
+          id?: string
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_completions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_completions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_responses: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          question_id: number
+          question_type: string
+          response: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          question_id: number
+          question_type: string
+          response: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          question_id?: number
+          question_type?: string
+          response?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_responses_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_responses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string

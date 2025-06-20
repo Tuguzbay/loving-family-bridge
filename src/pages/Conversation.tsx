@@ -3,19 +3,20 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { ConversationQuestions } from "@/components/ConversationQuestions";
+import { ConversationQuestions } from "@/components/Conversation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Heart, ArrowLeft, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Conversation = () => {
   const { user } = useAuth();
-  const { profile, family, loading } = useProfile();
+  const { profile, family, conversationCompletion, loading } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [conversationStarted, setConversationStarted] = useState(false);
-  const [conversationCompleted, setConversationCompleted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!user && !loading) {
@@ -24,21 +25,85 @@ const Conversation = () => {
   }, [user, loading, navigate]);
 
   const handleStartConversation = () => {
+    if (conversationCompletion) {
+      toast({
+        title: "Assessment Already Completed",
+        description: "You have already completed the family assessment.",
+        variant: "destructive"
+      });
+      return;
+    }
     setConversationStarted(true);
   };
 
-  const handleConversationComplete = (answers: Record<number, string>) => {
-    console.log('Conversation completed with answers:', answers);
+  const handleConversationComplete = async (answers: Record<number, string>) => {
+    if (!user || !family) {
+      toast({
+        title: "Error",
+        description: "User or family information missing.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    console.log('Saving conversation responses:', answers);
     
-    // Here you would typically save the answers to the database
-    // For now, we'll just show a success message
-    
-    setConversationCompleted(true);
-    
-    toast({
-      title: "Assessment Complete!",
-      description: "Thank you for sharing your thoughts. Your responses help us understand your family better.",
-    });
+    try {
+      // Save all responses
+      const responses = Object.entries(answers).map(([questionId, response]) => ({
+        user_id: user.id,
+        family_id: family.id,
+        question_id: parseInt(questionId),
+        question_type: parseInt(questionId) <= 10 ? 'short' : 'long',
+        response: response
+      }));
+
+      const { error: responsesError } = await supabase
+        .from('conversation_responses')
+        .insert(responses);
+
+      if (responsesError) {
+        console.error('Error saving responses:', responsesError);
+        throw responsesError;
+      }
+
+      // Mark conversation as completed
+      const { error: completionError } = await supabase
+        .from('conversation_completions')
+        .insert({
+          user_id: user.id,
+          family_id: family.id,
+          total_questions: Object.keys(answers).length
+        });
+
+      if (completionError) {
+        console.error('Error marking completion:', completionError);
+        throw completionError;
+      }
+
+      console.log('Conversation completed and saved successfully');
+      
+      toast({
+        title: "Assessment Complete!",
+        description: "Thank you for sharing your thoughts. Your responses help us understand your family better.",
+      });
+
+      // Navigate back to dashboard after a short delay
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error saving conversation:', error);
+      toast({
+        title: "Error Saving Response",
+        description: "There was an error saving your responses. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleReturnToDashboard = () => {
@@ -77,6 +142,73 @@ const Conversation = () => {
   }
 
   const isChild = profile?.user_type === 'child';
+
+  // If conversation is already completed, show completion screen
+  if (conversationCompletion) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        {/* Navigation */}
+        <nav className="flex justify-between items-center p-6 bg-white/80 backdrop-blur-sm border-b border-blue-100">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReturnToDashboard}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Button>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Heart className="h-8 w-8 text-blue-600" />
+            <span className="text-2xl font-bold text-gray-800">FamilyConnect</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-600">
+              {profile?.full_name.split(' ')[0]}
+            </span>
+          </div>
+        </nav>
+
+        <div className="container mx-auto px-6 py-8">
+          <div className="max-w-2xl mx-auto">
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm text-center">
+              <CardHeader>
+                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+                <CardTitle className="text-2xl text-gray-800">
+                  {isChild ? "Assessment Already Complete! 🎉" : "Assessment Already Complete!"}
+                </CardTitle>
+                <CardDescription className="text-lg">
+                  You completed this assessment on {new Date(conversationCompletion.completed_at).toLocaleDateString()}.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className={`p-6 rounded-lg ${isChild ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                  <p className="text-gray-700">
+                    {isChild 
+                      ? "Thank you for completing the family assessment! Your responses are helping create stronger family connections."
+                      : "Your family assessment responses have been recorded and are being used to provide personalized insights."
+                    }
+                  </p>
+                </div>
+                
+                <Button
+                  onClick={handleReturnToDashboard}
+                  size="lg"
+                  className={`${isChild ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                >
+                  Return to Dashboard
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -148,48 +280,11 @@ const Conversation = () => {
                     onClick={handleStartConversation}
                     size="lg"
                     className={`${isChild ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'} px-8 py-3 text-lg`}
+                    disabled={isLoading}
                   >
                     {isChild ? "Let's Start! 🚀" : "Begin Assessment"}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        ) : conversationCompleted ? (
-          // Completion Screen
-          <div className="max-w-2xl mx-auto">
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm text-center">
-              <CardHeader>
-                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
-                </div>
-                <CardTitle className="text-2xl text-gray-800">
-                  {isChild ? "Amazing Job! 🎉" : "Assessment Complete!"}
-                </CardTitle>
-                <CardDescription className="text-lg">
-                  {isChild 
-                    ? "Thank you for sharing your thoughts with us!"
-                    : "Your responses have been recorded successfully."
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className={`p-6 rounded-lg ${isChild ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                  <p className="text-gray-700">
-                    {isChild 
-                      ? "Your honest answers help us understand how to make your family connections even stronger. You're helping create something wonderful!"
-                      : "Your insights will help us provide personalized recommendations to strengthen your family communication and connection."
-                    }
-                  </p>
-                </div>
-                
-                <Button
-                  onClick={handleReturnToDashboard}
-                  size="lg"
-                  className={`${isChild ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-                >
-                  Return to Dashboard
-                </Button>
               </CardContent>
             </Card>
           </div>
