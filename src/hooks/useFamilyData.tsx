@@ -61,6 +61,12 @@ export const useFamilyData = () => {
       if (!familyData) {
         console.error('Family not found for family_id:', memberData.family_id);
         console.log('This indicates a data integrity issue - family_member references non-existent family');
+        // Clean up the orphaned family_member record
+        await supabase
+          .from('family_members')
+          .delete()
+          .eq('user_id', user.id);
+        
         setFamily(null);
         setFamilyMembers([]);
         setConversationCompletion(null);
