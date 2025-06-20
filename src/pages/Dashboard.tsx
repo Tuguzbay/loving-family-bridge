@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Heart, MessageCircle, Users, Calendar, ArrowRight, User, LogOut } from "lucide-react";
+import { Heart, MessageCircle, Users, Calendar, ArrowRight, User, LogOut, Star } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -68,6 +69,8 @@ const Dashboard = () => {
   }
 
   const otherFamilyMembers = familyMembers.filter(member => member.user_id !== user?.id);
+  const isChild = profile.user_type === 'child';
+  const isParent = profile.user_type === 'parent';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -76,6 +79,12 @@ const Dashboard = () => {
         <div className="flex items-center space-x-2">
           <Heart className="h-8 w-8 text-blue-600" />
           <span className="text-2xl font-bold text-gray-800">FamilyConnect</span>
+          {isChild && (
+            <Badge className="bg-purple-100 text-purple-800 ml-2">
+              <Star className="h-3 w-3 mr-1" />
+              Child
+            </Badge>
+          )}
         </div>
         <div className="flex items-center space-x-4">
           <span className="text-gray-600">Welcome, {profile.full_name.split(' ')[0]}!</span>
@@ -90,10 +99,13 @@ const Dashboard = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Welcome back, {profile.full_name.split(' ')[0]}! 👋
+            {isChild ? `Hi ${profile.full_name.split(' ')[0]}! 🌟` : `Welcome back, ${profile.full_name.split(' ')[0]}! 👋`}
           </h1>
           <p className="text-gray-600">
-            Continue building stronger connections with your family.
+            {isChild 
+              ? "Let's continue building stronger connections with your family!"
+              : "Continue building stronger connections with your family."
+            }
           </p>
         </div>
 
@@ -102,17 +114,17 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="text-xl text-gray-800 flex items-center">
                 <Users className="h-6 w-6 mr-2" />
-                Set Up Your Family
+                {isChild ? "Join Your Family" : "Set Up Your Family"}
               </CardTitle>
               <CardDescription>
-                {profile.user_type === 'parent' 
+                {isParent 
                   ? "Create your family and get a code to share with your child"
-                  : "Join your family using the code from your parent"
+                  : "Ask your parent for the family code to join your family"
                 }
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {profile.user_type === 'parent' ? (
+              {isParent ? (
                 <div className="text-center p-4 border-2 border-dashed border-blue-300 rounded-lg">
                   <p className="text-gray-600 mb-4">
                     You haven't created your family yet. Once you do, you'll get a family code to share with your child.
@@ -126,10 +138,13 @@ const Dashboard = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="text-center p-4 border-2 border-dashed border-green-300 rounded-lg">
+                <div className="text-center p-4 border-2 border-dashed border-purple-300 rounded-lg">
                   <p className="text-gray-600 mb-4">
-                    Ask your parent for the family code and enter it during registration to join your family.
+                    It looks like you haven't joined a family yet. Ask your parent for the family code and register again to join your family.
                   </p>
+                  <Button variant="outline" className="border-purple-300 text-purple-700 hover:bg-purple-50">
+                    Need Help?
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -143,14 +158,14 @@ const Dashboard = () => {
               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-gray-600">
-                    Family Code
+                    {isChild ? "Your Family" : "Family Code"}
                   </CardTitle>
                   <Users className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-gray-800">{family.family_code}</div>
                   <p className="text-xs text-gray-500 mt-2">
-                    Share with family members
+                    {isChild ? "Your family code" : "Share with family members"}
                   </p>
                 </CardContent>
               </Card>
@@ -173,7 +188,7 @@ const Dashboard = () => {
               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-gray-600">
-                    Progress
+                    {isChild ? "Your Progress" : "Progress"}
                   </CardTitle>
                   <Calendar className="h-4 w-4 text-purple-600" />
                 </CardHeader>
@@ -191,26 +206,36 @@ const Dashboard = () => {
               {/* Current Conversations */}
               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle className="text-xl text-gray-800">Active Conversations</CardTitle>
+                  <CardTitle className="text-xl text-gray-800">
+                    {isChild ? "Your Conversations" : "Active Conversations"}
+                  </CardTitle>
                   <CardDescription>
-                    Continue your family communication journey
+                    {isChild 
+                      ? "Continue your family communication journey"
+                      : "Continue your family communication journey"
+                    }
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="border rounded-lg p-4 bg-blue-50">
+                  <div className={`border rounded-lg p-4 ${isChild ? 'bg-purple-50' : 'bg-blue-50'}`}>
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-gray-800">Initial Family Assessment</h3>
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                      <h3 className="font-semibold text-gray-800">
+                        {isChild ? "Family Assessment" : "Initial Family Assessment"}
+                      </h3>
+                      <Badge variant="secondary" className={`${isChild ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
                         Ready to Start
                       </Badge>
                     </div>
                     <p className="text-gray-600 text-sm mb-3">
-                      Complete the guided conversation to help our AI understand your family dynamics.
+                      {isChild 
+                        ? "Share your thoughts to help our AI understand your family better."
+                        : "Complete the guided conversation to help our AI understand your family dynamics."
+                      }
                     </p>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-500">Not started</span>
                       <Link to="/conversation">
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        <Button size="sm" className={`${isChild ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
                           Start Conversation
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
@@ -220,7 +245,9 @@ const Dashboard = () => {
 
                   <div className="border rounded-lg p-4 bg-gray-50 opacity-60">
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-gray-600">Private Insights Session</h3>
+                      <h3 className="font-semibold text-gray-600">
+                        {isChild ? "Private Insights" : "Private Insights Session"}
+                      </h3>
                       <Badge variant="outline" className="border-gray-300 text-gray-500">
                         Locked
                       </Badge>
@@ -235,9 +262,14 @@ const Dashboard = () => {
               {/* Family Members */}
               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle className="text-xl text-gray-800">Family Members</CardTitle>
+                  <CardTitle className="text-xl text-gray-800">
+                    {isChild ? "My Family" : "Family Members"}
+                  </CardTitle>
                   <CardDescription>
-                    Your connected family network
+                    {isChild 
+                      ? "Your amazing family network"
+                      : "Your connected family network"
+                    }
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -251,7 +283,7 @@ const Dashboard = () => {
                           <h3 className="font-semibold text-gray-800">{member.profiles.full_name}</h3>
                           <p className="text-sm text-gray-600">
                             {member.profiles.age && `${member.profiles.age} years old • `}
-                            {member.profiles.user_type}
+                            {member.profiles.user_type === 'parent' ? 'Parent' : 'Child'}
                           </p>
                         </div>
                       </div>
@@ -263,9 +295,14 @@ const Dashboard = () => {
 
                   {otherFamilyMembers.length === 0 && (
                     <div className="text-center p-4 border-2 border-dashed border-gray-300 rounded-lg">
-                      <p className="text-gray-500 mb-2">No other family members yet</p>
+                      <p className="text-gray-500 mb-2">
+                        {isChild ? "Waiting for other family members" : "No other family members yet"}
+                      </p>
                       <p className="text-sm text-gray-400">
-                        Share your family code: <strong>{family.family_code}</strong>
+                        {isChild 
+                          ? `Family code: ${family.family_code}`
+                          : `Share your family code: ${family.family_code}`
+                        }
                       </p>
                     </div>
                   )}
@@ -276,26 +313,31 @@ const Dashboard = () => {
             {/* Quick Actions */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm mt-8">
               <CardHeader>
-                <CardTitle className="text-xl text-gray-800">Quick Actions</CardTitle>
+                <CardTitle className="text-xl text-gray-800">
+                  {isChild ? "What You Can Do" : "Quick Actions"}
+                </CardTitle>
                 <CardDescription>
-                  Common tasks to improve family communication
+                  {isChild 
+                    ? "Fun ways to connect with your family"
+                    : "Common tasks to improve family communication"
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-3 gap-4">
                   <Link to="/conversation">
                     <Button variant="outline" className="h-20 flex-col space-y-2 w-full">
-                      <MessageCircle className="h-6 w-6 text-blue-600" />
-                      <span>Start Conversation</span>
+                      <MessageCircle className={`h-6 w-6 ${isChild ? 'text-purple-600' : 'text-blue-600'}`} />
+                      <span>{isChild ? "Start Chatting" : "Start Conversation"}</span>
                     </Button>
                   </Link>
                   <Button variant="outline" className="h-20 flex-col space-y-2" disabled>
                     <Heart className="h-6 w-6 text-red-500" />
-                    <span>View Insights</span>
+                    <span>{isChild ? "Family Insights" : "View Insights"}</span>
                   </Button>
                   <Button variant="outline" className="h-20 flex-col space-y-2" disabled>
                     <Calendar className="h-6 w-6 text-purple-600" />
-                    <span>Schedule Family Time</span>
+                    <span>{isChild ? "Family Time" : "Schedule Family Time"}</span>
                   </Button>
                 </div>
               </CardContent>
