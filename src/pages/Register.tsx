@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Heart, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
@@ -26,7 +24,6 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { signUp, user } = useAuth();
-  const { joinFamily, createFamily } = useProfile();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -70,7 +67,7 @@ const Register = () => {
         return;
       }
 
-      console.log('User signed up successfully, waiting for profile creation...');
+      console.log('User signed up successfully');
 
       // Show success message for email confirmation
       toast({

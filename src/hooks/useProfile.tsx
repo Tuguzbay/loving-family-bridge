@@ -37,7 +37,6 @@ export const useProfile = () => {
   useEffect(() => {
     if (user) {
       fetchProfile();
-      fetchFamily();
     } else {
       setProfile(null);
       setFamily(null);
@@ -45,6 +44,23 @@ export const useProfile = () => {
       setLoading(false);
     }
   }, [user]);
+
+  // Separate effect to handle family joining for children after profile is loaded
+  useEffect(() => {
+    if (user && profile && profile.user_type === 'child' && !family) {
+      const familyCode = user.user_metadata?.family_code;
+      if (familyCode) {
+        console.log('Child profile loaded, attempting to join family with code:', familyCode);
+        handleChildFamilyJoin(familyCode);
+      } else {
+        setLoading(false);
+      }
+    } else if (user && profile && profile.user_type === 'parent') {
+      fetchFamily();
+    } else if (profile) {
+      setLoading(false);
+    }
+  }, [user, profile]);
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -58,9 +74,27 @@ export const useProfile = () => {
 
     if (error) {
       console.error('Error fetching profile:', error);
+      setLoading(false);
     } else {
       console.log('Profile fetched:', data);
       setProfile(data);
+    }
+  };
+
+  const handleChildFamilyJoin = async (familyCode: string) => {
+    console.log('Handling child family join with code:', familyCode);
+    
+    try {
+      const result = await joinFamily(familyCode);
+      if (result.error) {
+        console.error('Error joining family during registration:', result.error);
+      } else {
+        console.log('Successfully joined family during registration');
+      }
+    } catch (error) {
+      console.error('Unexpected error during family join:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -79,7 +113,7 @@ export const useProfile = () => {
       .single();
 
     if (memberError) {
-      console.log('User not in any family yet');
+      console.log('User not in any family yet:', memberError);
       setLoading(false);
       return;
     }
@@ -195,7 +229,12 @@ export const useProfile = () => {
         .select('*')
         .eq('family_id', familyData.id)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking existing membership:', checkError);
+        return { error: 'Error checking family membership' };
+      }
 
       if (existingMember) {
         console.log('User is already a member of this family');
