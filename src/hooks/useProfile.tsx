@@ -49,6 +49,7 @@ export const useProfile = () => {
   const fetchProfile = async () => {
     if (!user) return;
     
+    console.log('Fetching profile for user:', user.id);
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -58,6 +59,7 @@ export const useProfile = () => {
     if (error) {
       console.error('Error fetching profile:', error);
     } else {
+      console.log('Profile fetched:', data);
       setProfile(data);
     }
   };
@@ -65,6 +67,7 @@ export const useProfile = () => {
   const fetchFamily = async () => {
     if (!user) return;
 
+    console.log('Fetching family for user:', user.id);
     // First, check if user is a family member
     const { data: memberData, error: memberError } = await supabase
       .from('family_members')
@@ -82,6 +85,7 @@ export const useProfile = () => {
     }
 
     if (memberData?.families) {
+      console.log('Family found:', memberData.families);
       setFamily(memberData.families as Family);
       
       // Fetch all family members
@@ -96,6 +100,7 @@ export const useProfile = () => {
       if (allMembersError) {
         console.error('Error fetching family members:', allMembersError);
       } else {
+        console.log('Family members fetched:', allMembers);
         setFamilyMembers(allMembers || []);
       }
     }
@@ -104,44 +109,64 @@ export const useProfile = () => {
   };
 
   const createFamily = async () => {
-    if (!user || !profile) return { error: 'No user or profile found' };
-
-    // Generate family code
-    const { data: codeData, error: codeError } = await supabase
-      .rpc('generate_family_code');
-
-    if (codeError) {
-      return { error: codeError.message };
+    if (!user || !profile) {
+      console.error('No user or profile found');
+      return { error: 'No user or profile found' };
     }
 
-    // Create family
-    const { data: familyData, error: familyError } = await supabase
-      .from('families')
-      .insert({
-        family_code: codeData,
-        parent_id: user.id
-      })
-      .select()
-      .single();
+    console.log('Creating family for user:', user.id);
 
-    if (familyError) {
-      return { error: familyError.message };
+    try {
+      // Generate family code using the RPC function
+      const { data: codeData, error: codeError } = await supabase
+        .rpc('generate_family_code');
+
+      if (codeError) {
+        console.error('Error generating family code:', codeError);
+        return { error: codeError.message };
+      }
+
+      console.log('Generated family code:', codeData);
+
+      // Create family
+      const { data: familyData, error: familyError } = await supabase
+        .from('families')
+        .insert({
+          family_code: codeData,
+          parent_id: user.id
+        })
+        .select()
+        .single();
+
+      if (familyError) {
+        console.error('Error creating family:', familyError);
+        return { error: familyError.message };
+      }
+
+      console.log('Family created:', familyData);
+
+      // Add parent to family_members
+      const { error: memberError } = await supabase
+        .from('family_members')
+        .insert({
+          family_id: familyData.id,
+          user_id: user.id
+        });
+
+      if (memberError) {
+        console.error('Error adding parent to family_members:', memberError);
+        return { error: memberError.message };
+      }
+
+      console.log('Parent added to family_members');
+
+      // Refresh family data
+      await fetchFamily();
+      return { data: familyData };
+    } catch (error) {
+      console.error('Unexpected error creating family:', error);
+      return { error: 'An unexpected error occurred' };
     }
-
-    // Add parent to family_members
-    const { error: memberError } = await supabase
-      .from('family_members')
-      .insert({
-        family_id: familyData.id,
-        user_id: user.id
-      });
-
-    if (memberError) {
-      return { error: memberError.message };
-    }
-
-    await fetchFamily();
-    return { data: familyData };
   };
 
   const joinFamily = async (familyCode: string) => {
