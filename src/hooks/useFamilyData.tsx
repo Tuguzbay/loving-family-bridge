@@ -46,15 +46,24 @@ export const useFamilyData = () => {
 
       console.log('User is a family member:', memberData);
 
-      // Now fetch the family details using the family_id
+      // Now fetch the family details using the family_id - use maybeSingle to handle missing family
       const { data: familyData, error: familyError } = await supabase
         .from('families')
         .select('*')
         .eq('id', memberData.family_id)
-        .single();
+        .maybeSingle();
 
       if (familyError) {
         console.error('Error fetching family details:', familyError);
+        return;
+      }
+
+      if (!familyData) {
+        console.error('Family not found for family_id:', memberData.family_id);
+        console.log('This indicates a data integrity issue - family_member references non-existent family');
+        setFamily(null);
+        setFamilyMembers([]);
+        setConversationCompletion(null);
         return;
       }
 
