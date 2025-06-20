@@ -14,24 +14,29 @@ export const useFamilyData = () => {
     if (!user) return;
 
     console.log('--- Fetching Family Data ---');
+    console.log('User ID:', user.id);
     
     try {
       // First, check if user is a family member - use maybeSingle to handle no results gracefully
       const { data: memberData, error: memberError } = await supabase
         .from('family_members')
         .select(`
-          *,
-          families (*)
+          id,
+          family_id,
+          user_id,
+          joined_at
         `)
         .eq('user_id', user.id)
         .maybeSingle();
+
+      console.log('Member data query result:', memberData, memberError);
 
       if (memberError) {
         console.error('Error fetching family membership:', memberError);
         return;
       }
 
-      if (!memberData || !memberData.families) {
+      if (!memberData) {
         console.log('User is not a member of any family');
         setFamily(null);
         setFamilyMembers([]);
@@ -39,8 +44,22 @@ export const useFamilyData = () => {
         return;
       }
 
-      console.log('Family found:', memberData.families);
-      setFamily(memberData.families as Family);
+      console.log('User is a family member:', memberData);
+
+      // Now fetch the family details using the family_id
+      const { data: familyData, error: familyError } = await supabase
+        .from('families')
+        .select('*')
+        .eq('id', memberData.family_id)
+        .single();
+
+      if (familyError) {
+        console.error('Error fetching family details:', familyError);
+        return;
+      }
+
+      console.log('Family found:', familyData);
+      setFamily(familyData as Family);
       
       // Fetch all family members with profiles
       const { data: allMembers, error: allMembersError } = await supabase
@@ -59,7 +78,7 @@ export const useFamilyData = () => {
             updated_at
           )
         `)
-        .eq('family_id', memberData.families.id);
+        .eq('family_id', memberData.family_id);
 
       if (allMembersError) {
         console.error('Error fetching family members:', allMembersError);
@@ -70,7 +89,7 @@ export const useFamilyData = () => {
       }
       
       // Fetch conversation completion status
-      await fetchConversationCompletion(memberData.families.id);
+      await fetchConversationCompletion(memberData.family_id);
       
     } catch (error) {
       console.error('Unexpected error in fetchFamilyData:', error);
