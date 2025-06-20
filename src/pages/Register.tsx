@@ -49,66 +49,46 @@ const Register = () => {
     setIsLoading(true);
     
     try {
+      console.log('Starting registration process for:', userType);
+      
       // Prepare user metadata
       const userData = {
         full_name: formData.name,
         user_type: userType,
-        age: formData.age ? parseInt(formData.age) : null
+        age: formData.age ? parseInt(formData.age) : null,
+        family_code: userType === "child" ? formData.familyCode : null
       };
+
+      console.log('User data for signup:', userData);
 
       // Sign up user
       const { error: signUpError } = await signUp(formData.email, formData.password, userData);
       
       if (signUpError) {
+        console.error('Sign up error:', signUpError);
         setIsLoading(false);
         return;
       }
 
-      // Wait a moment for the user to be created and profile trigger to run
-      setTimeout(async () => {
-        try {
-          if (userType === "parent") {
-            // Create family for parent
-            const { error: familyError } = await createFamily();
-            if (familyError) {
-              toast({
-                title: "Family Creation Error",
-                description: familyError,
-                variant: "destructive"
-              });
-            } else {
-              toast({
-                title: "Registration Successful!",
-                description: "Your family has been created. You'll receive a family code to share with your child.",
-              });
-            }
-          } else {
-            // Join family for child
-            if (formData.familyCode) {
-              const { error: joinError } = await joinFamily(formData.familyCode);
-              if (joinError) {
-                toast({
-                  title: "Family Join Error",
-                  description: joinError,
-                  variant: "destructive"
-                });
-              } else {
-                toast({
-                  title: "Registration Successful!",
-                  description: "You've been added to your family!",
-                });
-              }
-            }
-          }
-          
-          navigate("/dashboard");
-        } catch (error) {
-          console.error('Post-signup error:', error);
-        }
-      }, 2000);
+      console.log('User signed up successfully, waiting for profile creation...');
+
+      // Show success message for email confirmation
+      toast({
+        title: "Registration Successful!",
+        description: "Please check your email to confirm your account, then sign in.",
+      });
+
+      // Redirect to login page
+      navigate("/login");
 
     } catch (error) {
       console.error('Registration error:', error);
+      toast({
+        title: "Registration Error",
+        description: "An unexpected error occurred during registration.",
+        variant: "destructive"
+      });
+    } finally {
       setIsLoading(false);
     }
   };
