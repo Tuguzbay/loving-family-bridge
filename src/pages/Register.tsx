@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,18 +48,24 @@ const Register = () => {
     
     try {
       console.log('Starting registration process for:', userType);
+      console.log('Form data:', formData);
       
-      // Prepare user metadata
+      // Prepare user metadata - this is crucial for the family_code to be stored
       const userData = {
         full_name: formData.name,
         user_type: userType,
         age: formData.age ? parseInt(formData.age) : null,
-        family_code: userType === "child" ? formData.familyCode : null
       };
 
-      console.log('User data for signup:', userData);
+      // Only add family_code if user is a child and has provided one
+      if (userType === "child" && formData.familyCode.trim()) {
+        userData.family_code = formData.familyCode.trim();
+        console.log('Adding family_code to user metadata:', formData.familyCode.trim());
+      }
 
-      // Sign up user
+      console.log('Final user data for signup:', userData);
+
+      // Sign up user with proper metadata
       const { error: signUpError } = await signUp(formData.email, formData.password, userData);
       
       if (signUpError) {
@@ -67,7 +74,7 @@ const Register = () => {
         return;
       }
 
-      console.log('User signed up successfully');
+      console.log('User signed up successfully with metadata');
 
       // Show success message for email confirmation
       toast({

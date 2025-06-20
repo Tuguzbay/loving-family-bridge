@@ -36,8 +36,11 @@ export const useProfile = () => {
 
   useEffect(() => {
     if (user) {
+      console.log('User logged in, starting profile fetch for:', user.id);
+      console.log('User metadata:', user.user_metadata);
       fetchProfile();
     } else {
+      console.log('No user, resetting state');
       setProfile(null);
       setFamily(null);
       setFamilyMembers([]);
@@ -48,6 +51,7 @@ export const useProfile = () => {
   // Handle family operations after profile is loaded
   useEffect(() => {
     if (user && profile) {
+      console.log('Profile loaded, starting family operations for:', profile.user_type);
       handleFamilyOperations();
     }
   }, [user, profile]);
@@ -66,7 +70,7 @@ export const useProfile = () => {
       console.error('Error fetching profile:', error);
       setLoading(false);
     } else {
-      console.log('Profile fetched:', data);
+      console.log('Profile fetched successfully:', data);
       setProfile(data);
     }
   };
@@ -74,66 +78,98 @@ export const useProfile = () => {
   const handleFamilyOperations = async () => {
     if (!user || !profile) return;
 
-    console.log('Handling family operations for:', profile.user_type, user.id);
+    console.log('=== FAMILY OPERATIONS START ===');
+    console.log('User type:', profile.user_type);
+    console.log('User ID:', user.id);
+    console.log('User metadata:', user.user_metadata);
 
-    if (profile.user_type === 'child') {
-      // First check if child is already in a family
-      const { data: existingMember } = await supabase
-        .from('family_members')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existingMember) {
-        console.log('Child is already in a family, fetching family data');
-        await fetchFamily();
-      } else {
-        // Child is not in a family, try to join using family code
-        const familyCode = user.user_metadata?.family_code;
-        if (familyCode) {
-          console.log('Child needs to join family with code:', familyCode);
-          await joinFamily(familyCode);
-        } else {
-          console.log('Child has no family code');
-          setLoading(false);
-        }
+    try {
+      if (profile.user_type === 'child') {
+        await handleChildFamilySetup();
+      } else if (profile.user_type === 'parent') {
+        await handleParentFamilySetup();
       }
-    } else if (profile.user_type === 'parent') {
-      console.log('Parent user, fetching family');
-      await fetchFamily();
-    } else {
+    } catch (error) {
+      console.error('Error in family operations:', error);
       setLoading(false);
     }
   };
 
-  const fetchFamily = async () => {
+  const handleChildFamilySetup = async () => {
     if (!user) return;
 
-    console.log('Fetching family for user:', user.id);
+    console.log('--- Child Family Setup ---');
     
-    // Check if user is a family member
-    const { data: memberData, error: memberError } = await supabase
+    // Check if child is already in a family
+    const { data: existingMember, error: memberError } = await supabase
       .from('family_members')
-      .select(`
-        *,
-        families (*)
-      `)
+      .select('*')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (memberError && memberError.code !== 'PGRST116') {
-      console.error('Error fetching family membership:', memberError);
+    if (memberError) {
+      console.error('Error checking existing membership:', memberError);
       setLoading(false);
       return;
     }
 
-    if (!memberData) {
-      console.log('User is not a member of any family');
-      setLoading(false);
+    if (existingMember) {
+      console.log('Child is already a family member:', existingMember);
+      await fetchFamilyData();
       return;
     }
 
-    if (memberData.families) {
+    // Child is not in a family, try to join using family code from metadata
+    const familyCode = user.user_metadata?.family_code;
+    console.log('Family code from metadata:', familyCode);
+
+    if (familyCode) {
+      console.log('Attempting to join family with code:', familyCode);
+      const result = await joinFamily(familyCode);
+      if (result.error) {
+        console.error('Failed to join family:', result.error);
+        setLoading(false);
+      }
+      // If successful, joinFamily will call fetchFamilyData
+    } else {
+      console.log('No family code found in metadata');
+      setLoading(false);
+    }
+  };
+
+  const handleParentFamilySetup = async () => {
+    console.log('--- Parent Family Setup ---');
+    await fetchFamilyData();
+  };
+
+  const fetchFamilyData = async () => {
+    if (!user) return;
+
+    console.log('--- Fetching Family Data ---');
+    
+    try {
+      // First, check if user is a family member
+      const { data: memberData, error: memberError } = await supabase
+        .from('family_members')
+        .select(`
+          *,
+          families (*)
+        `)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (memberError) {
+        console.error('Error fetching family membership:', memberError);
+        setLoading(false);
+        return;
+      }
+
+      if (!memberData || !memberData.families) {
+        console.log('User is not a member of any family');
+        setLoading(false);
+        return;
+      }
+
       console.log('Family found:', memberData.families);
       setFamily(memberData.families as Family);
       
@@ -149,12 +185,15 @@ export const useProfile = () => {
       if (allMembersError) {
         console.error('Error fetching family members:', allMembersError);
       } else {
-        console.log('Family members fetched:', allMembers);
+        console.log('All family members:', allMembers);
         setFamilyMembers(allMembers || []);
       }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Unexpected error in fetchFamilyData:', error);
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   const createFamily = async () => {
@@ -163,7 +202,8 @@ export const useProfile = () => {
       return { error: 'No user or profile found' };
     }
 
-    console.log('Creating family for user:', user.id);
+    console.log('=== Creating Family ===');
+    console.log('User:', user.id);
 
     try {
       // Generate family code using the RPC function
@@ -207,10 +247,10 @@ export const useProfile = () => {
         return { error: memberError.message };
       }
 
-      console.log('Parent added to family_members');
+      console.log('Parent added to family_members successfully');
 
       // Refresh family data
-      await fetchFamily();
+      await fetchFamilyData();
       return { data: familyData };
     } catch (error) {
       console.error('Unexpected error creating family:', error);
@@ -221,7 +261,9 @@ export const useProfile = () => {
   const joinFamily = async (familyCode: string) => {
     if (!user) return { error: 'No user found' };
 
-    console.log('Attempting to join family with code:', familyCode);
+    console.log('=== Joining Family ===');
+    console.log('Family code:', familyCode);
+    console.log('User ID:', user.id);
 
     try {
       // Find family by code
@@ -229,10 +271,15 @@ export const useProfile = () => {
         .from('families')
         .select('*')
         .eq('family_code', familyCode)
-        .single();
+        .maybeSingle();
 
       if (familyError) {
         console.error('Error finding family:', familyError);
+        return { error: 'Error finding family: ' + familyError.message };
+      }
+
+      if (!familyData) {
+        console.error('No family found with code:', familyCode);
         return { error: 'Invalid family code' };
       }
 
@@ -246,14 +293,14 @@ export const useProfile = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (checkError && checkError.code !== 'PGRST116') {
+      if (checkError) {
         console.error('Error checking existing membership:', checkError);
         return { error: 'Error checking family membership' };
       }
 
       if (existingMember) {
         console.log('User is already a member of this family');
-        await fetchFamily();
+        await fetchFamilyData();
         return { data: familyData };
       }
 
@@ -267,11 +314,11 @@ export const useProfile = () => {
 
       if (memberError) {
         console.error('Error adding user to family:', memberError);
-        return { error: memberError.message };
+        return { error: 'Failed to join family: ' + memberError.message };
       }
 
-      console.log('Successfully joined family');
-      await fetchFamily();
+      console.log('Successfully joined family!');
+      await fetchFamilyData();
       return { data: familyData };
     } catch (error) {
       console.error('Unexpected error joining family:', error);
@@ -286,6 +333,6 @@ export const useProfile = () => {
     loading,
     createFamily,
     joinFamily,
-    refetch: fetchFamily
+    refetch: fetchFamilyData
   };
 };
