@@ -345,21 +345,9 @@ export const useProfile = () => {
     console.log('User ID:', user.id);
 
     try {
-      // Find family by code - first try without any RLS constraints by using a service role query
-      // Let's try a different approach - query all families first to debug
-      console.log('Querying all families to debug RLS...');
-      const { data: allFamiliesDebug, error: debugError } = await supabase
-        .from('families')
-        .select('*');
-      
-      console.log('All families query result:', { data: allFamiliesDebug, error: debugError });
-
-      // Now try to find the specific family
+      // Use the new RPC function to find family by code (bypasses RLS)
       const { data: familyData, error: familyError } = await supabase
-        .from('families')
-        .select('*')
-        .eq('family_code', familyCode.trim())
-        .maybeSingle();
+        .rpc('find_family_by_code', { code_param: familyCode.trim() });
 
       console.log('Family lookup result:', { data: familyData, error: familyError });
 
@@ -368,18 +356,19 @@ export const useProfile = () => {
         return { error: 'Error finding family: ' + familyError.message };
       }
 
-      if (!familyData) {
+      if (!familyData || familyData.length === 0) {
         console.error('No family found with code:', familyCode);
         return { error: 'Invalid family code - no family found' };
       }
 
-      console.log('Family found:', familyData);
+      const family = familyData[0];
+      console.log('Family found:', family);
 
       // Check if user is already a member
       const { data: existingMember, error: checkError } = await supabase
         .from('family_members')
         .select('*')
-        .eq('family_id', familyData.id)
+        .eq('family_id', family.id)
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -391,14 +380,14 @@ export const useProfile = () => {
       if (existingMember) {
         console.log('User is already a member of this family');
         await fetchFamilyData();
-        return { data: familyData };
+        return { data: family };
       }
 
       // Add user to family
       const { error: memberError } = await supabase
         .from('family_members')
         .insert({
-          family_id: familyData.id,
+          family_id: family.id,
           user_id: user.id
         });
 
@@ -409,7 +398,7 @@ export const useProfile = () => {
 
       console.log('Successfully joined family!');
       await fetchFamilyData();
-      return { data: familyData };
+      return { data: family };
     } catch (error) {
       console.error('Unexpected error joining family:', error);
       return { error: 'An unexpected error occurred' };

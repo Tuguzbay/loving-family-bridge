@@ -324,6 +324,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_family_by_code: {
+        Args: { code_param: string }
+        Returns: {
+          id: string
+          family_code: string
+          parent_id: string
+          created_at: string
+        }[]
+      }
       generate_family_code: {
         Args: Record<PropertyKey, never>
         Returns: string
