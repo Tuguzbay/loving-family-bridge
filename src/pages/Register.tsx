@@ -51,7 +51,12 @@ const Register = () => {
       console.log('Form data:', formData);
       
       // Prepare user metadata - this is crucial for the family_code to be stored
-      const userData = {
+      const userData: {
+        full_name: string;
+        user_type: string;
+        age: number | null;
+        family_code?: string;
+      } = {
         full_name: formData.name,
         user_type: userType,
         age: formData.age ? parseInt(formData.age) : null,
