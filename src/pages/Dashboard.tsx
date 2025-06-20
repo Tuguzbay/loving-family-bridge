@@ -9,10 +9,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { FamilyCodeInput } from "@/components/FamilyCodeInput";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
-  const { profile, family, familyMembers, conversationCompletion, loading, createFamily } = useProfile();
+  const { profile, family, familyMembers, conversationCompletion, loading, createFamily, joinFamily } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isCreatingFamily, setIsCreatingFamily] = useState(false);
@@ -111,45 +112,40 @@ const Dashboard = () => {
         </div>
 
         {!family && (
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm mb-8">
-            <CardHeader>
-              <CardTitle className="text-xl text-gray-800 flex items-center">
-                <Users className="h-6 w-6 mr-2" />
-                {isChild ? "Join Your Family" : "Set Up Your Family"}
-              </CardTitle>
-              <CardDescription>
-                {isParent 
-                  ? "Create your family and get a code to share with your child"
-                  : "Ask your parent for the family code to join your family"
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isParent ? (
-                <div className="text-center p-4 border-2 border-dashed border-blue-300 rounded-lg">
-                  <p className="text-gray-600 mb-4">
-                    You haven't created your family yet. Once you do, you'll get a family code to share with your child.
-                  </p>
-                  <Button 
-                    className="bg-blue-600 hover:bg-blue-700"
-                    onClick={handleCreateFamily}
-                    disabled={isCreatingFamily}
-                  >
-                    {isCreatingFamily ? "Creating Family..." : "Create Family"}
-                  </Button>
-                </div>
-              ) : (
-                <div className="text-center p-4 border-2 border-dashed border-purple-300 rounded-lg">
-                  <p className="text-gray-600 mb-4">
-                    It looks like you haven't joined a family yet. Ask your parent for the family code and register again to join your family.
-                  </p>
-                  <Button variant="outline" className="border-purple-300 text-purple-700 hover:bg-purple-50">
-                    Need Help?
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <div className="mb-8">
+            {isParent ? (
+              <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl text-gray-800 flex items-center">
+                    <Users className="h-6 w-6 mr-2" />
+                    Set Up Your Family
+                  </CardTitle>
+                  <CardDescription>
+                    Create your family and get a code to share with your child
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center p-4 border-2 border-dashed border-blue-300 rounded-lg">
+                    <p className="text-gray-600 mb-4">
+                      You haven't created your family yet. Once you do, you'll get a family code to share with your child.
+                    </p>
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={handleCreateFamily}
+                      disabled={isCreatingFamily}
+                    >
+                      {isCreatingFamily ? "Creating Family..." : "Create Family"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <FamilyCodeInput 
+                onJoinFamily={joinFamily}
+                isLoading={loading}
+              />
+            )}
+          </div>
         )}
 
         {family && (
