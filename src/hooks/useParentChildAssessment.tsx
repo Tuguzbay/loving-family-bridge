@@ -9,6 +9,18 @@ interface AssessmentResponses {
   long: string[];
 }
 
+// Type guard to check if a Json value is AssessmentResponses
+const isAssessmentResponses = (value: any): value is AssessmentResponses => {
+  return (
+    value &&
+    typeof value === 'object' &&
+    Array.isArray(value.short) &&
+    Array.isArray(value.long) &&
+    value.short.every((item: any) => typeof item === 'string') &&
+    value.long.every((item: any) => typeof item === 'string')
+  );
+};
+
 export const useParentChildAssessment = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -46,8 +58,8 @@ export const useParentChildAssessment = () => {
         if (error) throw error;
 
         // If both parent and child have responses, trigger AI analysis
-        const childResponses = existingAssessment.child_responses as AssessmentResponses;
-        if (childResponses && childResponses.short && childResponses.short.length > 0) {
+        const childResponses = existingAssessment.child_responses;
+        if (childResponses && isAssessmentResponses(childResponses)) {
           await triggerAIAnalysis(data.id, responses, childResponses);
         }
 
@@ -123,8 +135,12 @@ export const useParentChildAssessment = () => {
       // Convert the database response to our expected type
       return {
         ...data,
-        parent_responses: data.parent_responses as AssessmentResponses,
-        child_responses: data.child_responses as AssessmentResponses,
+        parent_responses: isAssessmentResponses(data.parent_responses) 
+          ? data.parent_responses 
+          : { short: [], long: [] },
+        child_responses: isAssessmentResponses(data.child_responses) 
+          ? data.child_responses 
+          : { short: [], long: [] },
         ai_analysis: data.ai_analysis ? (data.ai_analysis as any).analysis : undefined
       };
     } catch (error) {
@@ -148,8 +164,12 @@ export const useParentChildAssessment = () => {
       // Convert the database responses to our expected type
       return data.map(item => ({
         ...item,
-        parent_responses: item.parent_responses as AssessmentResponses,
-        child_responses: item.child_responses as AssessmentResponses,
+        parent_responses: isAssessmentResponses(item.parent_responses) 
+          ? item.parent_responses 
+          : { short: [], long: [] },
+        child_responses: isAssessmentResponses(item.child_responses) 
+          ? item.child_responses 
+          : { short: [], long: [] },
         ai_analysis: item.ai_analysis ? (item.ai_analysis as any).analysis : undefined
       }));
     } catch (error) {
