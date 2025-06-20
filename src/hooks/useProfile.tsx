@@ -48,22 +48,7 @@ export const useProfile = () => {
   // Handle family operations after profile is loaded
   useEffect(() => {
     if (user && profile) {
-      if (profile.user_type === 'child') {
-        // For children, try to join family if they have a family code and aren't in a family yet
-        const familyCode = user.user_metadata?.family_code;
-        if (familyCode && !family) {
-          console.log('Child needs to join family with code:', familyCode);
-          handleChildFamilyJoin(familyCode);
-        } else {
-          // Child might already be in a family, fetch it
-          fetchFamily();
-        }
-      } else if (profile.user_type === 'parent') {
-        // For parents, fetch their family
-        fetchFamily();
-      } else {
-        setLoading(false);
-      }
+      handleFamilyOperations();
     }
   }, [user, profile]);
 
@@ -86,20 +71,37 @@ export const useProfile = () => {
     }
   };
 
-  const handleChildFamilyJoin = async (familyCode: string) => {
-    console.log('Child attempting to join family with code:', familyCode);
-    
-    try {
-      const result = await joinFamily(familyCode);
-      if (result.error) {
-        console.error('Error joining family:', result.error);
-        setLoading(false);
+  const handleFamilyOperations = async () => {
+    if (!user || !profile) return;
+
+    console.log('Handling family operations for:', profile.user_type, user.id);
+
+    if (profile.user_type === 'child') {
+      // First check if child is already in a family
+      const { data: existingMember } = await supabase
+        .from('family_members')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingMember) {
+        console.log('Child is already in a family, fetching family data');
+        await fetchFamily();
       } else {
-        console.log('Child successfully joined family');
-        // Family data will be fetched by joinFamily function
+        // Child is not in a family, try to join using family code
+        const familyCode = user.user_metadata?.family_code;
+        if (familyCode) {
+          console.log('Child needs to join family with code:', familyCode);
+          await joinFamily(familyCode);
+        } else {
+          console.log('Child has no family code');
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      console.error('Unexpected error during family join:', error);
+    } else if (profile.user_type === 'parent') {
+      console.log('Parent user, fetching family');
+      await fetchFamily();
+    } else {
       setLoading(false);
     }
   };
