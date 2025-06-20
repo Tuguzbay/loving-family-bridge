@@ -345,11 +345,11 @@ export const useProfile = () => {
     console.log('User ID:', user.id);
 
     try {
-      // Find family by code
+      // Find family by code - using trim() to handle any whitespace
       const { data: familyData, error: familyError } = await supabase
         .from('families')
         .select('*')
-        .eq('family_code', familyCode)
+        .eq('family_code', familyCode.trim())
         .maybeSingle();
 
       if (familyError) {
@@ -359,6 +359,16 @@ export const useProfile = () => {
 
       if (!familyData) {
         console.error('No family found with code:', familyCode);
+        
+        // Debug: Let's check all families to see what codes exist
+        const { data: allFamilies, error: debugError } = await supabase
+          .from('families')
+          .select('family_code');
+        
+        if (!debugError) {
+          console.log('All existing family codes:', allFamilies?.map(f => f.family_code));
+        }
+        
         return { error: 'Invalid family code' };
       }
 
