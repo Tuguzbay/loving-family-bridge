@@ -45,20 +45,25 @@ export const useProfile = () => {
     }
   }, [user]);
 
-  // Separate effect to handle family joining for children after profile is loaded
+  // Handle family operations after profile is loaded
   useEffect(() => {
-    if (user && profile && profile.user_type === 'child' && !family) {
-      const familyCode = user.user_metadata?.family_code;
-      if (familyCode) {
-        console.log('Child profile loaded, attempting to join family with code:', familyCode);
-        handleChildFamilyJoin(familyCode);
+    if (user && profile) {
+      if (profile.user_type === 'child') {
+        // For children, try to join family if they have a family code and aren't in a family yet
+        const familyCode = user.user_metadata?.family_code;
+        if (familyCode && !family) {
+          console.log('Child needs to join family with code:', familyCode);
+          handleChildFamilyJoin(familyCode);
+        } else {
+          // Child might already be in a family, fetch it
+          fetchFamily();
+        }
+      } else if (profile.user_type === 'parent') {
+        // For parents, fetch their family
+        fetchFamily();
       } else {
         setLoading(false);
       }
-    } else if (user && profile && profile.user_type === 'parent') {
-      fetchFamily();
-    } else if (profile) {
-      setLoading(false);
     }
   }, [user, profile]);
 
@@ -82,18 +87,19 @@ export const useProfile = () => {
   };
 
   const handleChildFamilyJoin = async (familyCode: string) => {
-    console.log('Handling child family join with code:', familyCode);
+    console.log('Child attempting to join family with code:', familyCode);
     
     try {
       const result = await joinFamily(familyCode);
       if (result.error) {
-        console.error('Error joining family during registration:', result.error);
+        console.error('Error joining family:', result.error);
+        setLoading(false);
       } else {
-        console.log('Successfully joined family during registration');
+        console.log('Child successfully joined family');
+        // Family data will be fetched by joinFamily function
       }
     } catch (error) {
       console.error('Unexpected error during family join:', error);
-    } finally {
       setLoading(false);
     }
   };
@@ -102,7 +108,8 @@ export const useProfile = () => {
     if (!user) return;
 
     console.log('Fetching family for user:', user.id);
-    // First, check if user is a family member
+    
+    // Check if user is a family member
     const { data: memberData, error: memberError } = await supabase
       .from('family_members')
       .select(`
@@ -110,15 +117,21 @@ export const useProfile = () => {
         families (*)
       `)
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (memberError) {
-      console.log('User not in any family yet:', memberError);
+    if (memberError && memberError.code !== 'PGRST116') {
+      console.error('Error fetching family membership:', memberError);
       setLoading(false);
       return;
     }
 
-    if (memberData?.families) {
+    if (!memberData) {
+      console.log('User is not a member of any family');
+      setLoading(false);
+      return;
+    }
+
+    if (memberData.families) {
       console.log('Family found:', memberData.families);
       setFamily(memberData.families as Family);
       
@@ -231,7 +244,7 @@ export const useProfile = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (checkError) {
+      if (checkError && checkError.code !== 'PGRST116') {
         console.error('Error checking existing membership:', checkError);
         return { error: 'Error checking family membership' };
       }
