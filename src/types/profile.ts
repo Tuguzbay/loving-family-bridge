@@ -44,9 +44,7 @@ export interface ParentChildAssessment {
     short: string[];
     long: string[];
   };
-  ai_analysis?: {
-    analysis: string;
-  };
+  ai_analysis?: string;
   created_at: string;
   updated_at: string;
 }

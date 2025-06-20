@@ -2,23 +2,11 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import type { Profile } from '@/types/profile';
+import type { ParentChildAssessment } from '@/types/profile';
 
 interface AssessmentResponses {
   short: string[];
   long: string[];
-}
-
-interface ParentChildAssessment {
-  id: string;
-  family_id: string;
-  parent_id: string;
-  child_id: string;
-  parent_responses: AssessmentResponses;
-  child_responses: AssessmentResponses;
-  ai_analysis?: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export const useParentChildAssessment = () => {
@@ -48,7 +36,7 @@ export const useParentChildAssessment = () => {
         const { data, error } = await supabase
           .from('parent_child_assessments')
           .update({
-            parent_responses: responses,
+            parent_responses: responses as any,
             updated_at: new Date().toISOString()
           })
           .eq('id', existingAssessment.id)
@@ -58,8 +46,9 @@ export const useParentChildAssessment = () => {
         if (error) throw error;
 
         // If both parent and child have responses, trigger AI analysis
-        if (existingAssessment.child_responses && Object.keys(existingAssessment.child_responses).length > 0) {
-          await triggerAIAnalysis(data.id, responses, existingAssessment.child_responses);
+        const childResponses = existingAssessment.child_responses as AssessmentResponses;
+        if (childResponses && childResponses.short && childResponses.short.length > 0) {
+          await triggerAIAnalysis(data.id, responses, childResponses);
         }
 
         return { data };
@@ -71,8 +60,8 @@ export const useParentChildAssessment = () => {
             family_id: familyId,
             parent_id: user.id,
             child_id: childId,
-            parent_responses: responses,
-            child_responses: { short: [], long: [] } // Empty child responses initially
+            parent_responses: responses as any,
+            child_responses: { short: [], long: [] } as any // Empty child responses initially
           })
           .select()
           .single();
@@ -107,7 +96,7 @@ export const useParentChildAssessment = () => {
       await supabase
         .from('parent_child_assessments')
         .update({
-          ai_analysis: { analysis: analysisResult.analysis },
+          ai_analysis: { analysis: analysisResult.analysis } as any,
           updated_at: new Date().toISOString()
         })
         .eq('id', assessmentId);
@@ -129,7 +118,15 @@ export const useParentChildAssessment = () => {
         .maybeSingle();
 
       if (error) throw error;
-      return data;
+      if (!data) return null;
+
+      // Convert the database response to our expected type
+      return {
+        ...data,
+        parent_responses: data.parent_responses as AssessmentResponses,
+        child_responses: data.child_responses as AssessmentResponses,
+        ai_analysis: data.ai_analysis ? (data.ai_analysis as any).analysis : undefined
+      };
     } catch (error) {
       console.error('Error fetching assessment:', error);
       return null;
@@ -146,7 +143,15 @@ export const useParentChildAssessment = () => {
         .eq('family_id', familyId);
 
       if (error) throw error;
-      return data || [];
+      if (!data) return [];
+
+      // Convert the database responses to our expected type
+      return data.map(item => ({
+        ...item,
+        parent_responses: item.parent_responses as AssessmentResponses,
+        child_responses: item.child_responses as AssessmentResponses,
+        ai_analysis: item.ai_analysis ? (item.ai_analysis as any).analysis : undefined
+      }));
     } catch (error) {
       console.error('Error fetching family assessments:', error);
       return [];
