@@ -24,9 +24,13 @@ export const useFamilyOperations = () => {
           families (*)
         `)
         .eq('user_id', user.id)
-        .maybeSingle();
+        .single();
 
       if (memberError) {
+        if (memberError.code === 'PGRST116') {
+          console.log('User is not a member of any family');
+          return;
+        }
         console.error('Error fetching family membership:', memberError);
         return;
       }
@@ -197,7 +201,10 @@ export const useFamilyOperations = () => {
 
       if (existingMember) {
         console.log('User is already a member of this family');
-        await fetchFamilyData();
+        // Force a delay to ensure database consistency
+        setTimeout(async () => {
+          await fetchFamilyData();
+        }, 1000);
         return { data: family };
       }
 
@@ -215,7 +222,12 @@ export const useFamilyOperations = () => {
       }
 
       console.log('Successfully joined family!');
-      await fetchFamilyData();
+      
+      // Force a delay to ensure database consistency before fetching
+      setTimeout(async () => {
+        await fetchFamilyData();
+      }, 1000);
+      
       return { data: family };
     } catch (error) {
       console.error('Unexpected error joining family:', error);
