@@ -16,7 +16,7 @@ export const useFamilyData = () => {
     console.log('--- Fetching Family Data ---');
     
     try {
-      // First, check if user is a family member
+      // First, check if user is a family member - use maybeSingle to handle no results gracefully
       const { data: memberData, error: memberError } = await supabase
         .from('family_members')
         .select(`
@@ -24,19 +24,18 @@ export const useFamilyData = () => {
           families (*)
         `)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (memberError) {
-        if (memberError.code === 'PGRST116') {
-          console.log('User is not a member of any family');
-          return;
-        }
         console.error('Error fetching family membership:', memberError);
         return;
       }
 
       if (!memberData || !memberData.families) {
         console.log('User is not a member of any family');
+        setFamily(null);
+        setFamilyMembers([]);
+        setConversationCompletion(null);
         return;
       }
 

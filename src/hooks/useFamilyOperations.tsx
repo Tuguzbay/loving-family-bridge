@@ -22,10 +22,11 @@ export const useFamilyOperations = () => {
     const result = await joinFamilyBase(familyCode);
     
     if (result.data) {
-      // Force a delay to ensure database consistency before fetching
+      // Force a longer delay to ensure database consistency before fetching
       setTimeout(async () => {
+        console.log('Refetching family data after successful join...');
         await fetchFamilyData();
-      }, 1000);
+      }, 2000);
     }
     
     return result;
