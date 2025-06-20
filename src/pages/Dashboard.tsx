@@ -68,7 +68,6 @@ const Dashboard = () => {
     );
   }
 
-  const otherFamilyMembers = familyMembers.filter(member => member.user_id !== user?.id);
   const isChild = profile.user_type === 'child';
   const isParent = profile.user_type === 'parent';
   const hasCompletedConversation = !!conversationCompletion;
@@ -205,17 +204,14 @@ const Dashboard = () => {
 
             {/* Main Content */}
             <div className="grid lg:grid-cols-2 gap-8">
-              {/* Current Conversations */}
+              {/* Active Conversations - Same for both parent and child */}
               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="text-xl text-gray-800">
                     {isChild ? "Your Conversations" : "Active Conversations"}
                   </CardTitle>
                   <CardDescription>
-                    {isChild 
-                      ? "Continue your family communication journey"
-                      : "Continue your family communication journey"
-                    }
+                    Continue your family communication journey
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -273,17 +269,14 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Family Members */}
+              {/* Family Members - Same for both parent and child */}
               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="text-xl text-gray-800">
                     {isChild ? "My Family" : "Family Members"}
                   </CardTitle>
                   <CardDescription>
-                    {isChild 
-                      ? "Your amazing family network"
-                      : "Your connected family network"
-                    }
+                    Your connected family network
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -314,10 +307,7 @@ const Dashboard = () => {
                         {isChild ? "Waiting for other family members" : "No other family members yet"}
                       </p>
                       <p className="text-sm text-gray-400">
-                        {isChild 
-                          ? `Family code: ${family.family_code}`
-                          : `Share your family code: ${family.family_code}`
-                        }
+                        Family code: {family.family_code}
                       </p>
                     </div>
                   )}
@@ -325,7 +315,7 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            {/* Quick Actions */}
+            {/* Quick Actions - Same for both parent and child */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm mt-8">
               <CardHeader>
                 <CardTitle className="text-xl text-gray-800">

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -217,17 +218,28 @@ export const useProfile = () => {
       console.log('Family found:', memberData.families);
       setFamily(memberData.families as Family);
       
-      // Fetch all family members with profiles
+      // Fetch all family members with profiles - Updated query to ensure all members are fetched
       const { data: allMembers, error: allMembersError } = await supabase
         .from('family_members')
         .select(`
-          *,
-          profiles (*)
+          id,
+          family_id,
+          user_id,
+          joined_at,
+          profiles!inner (
+            id,
+            full_name,
+            user_type,
+            age,
+            created_at,
+            updated_at
+          )
         `)
         .eq('family_id', memberData.families.id);
 
       if (allMembersError) {
         console.error('Error fetching family members:', allMembersError);
+        setFamilyMembers([]);
       } else {
         console.log('All family members fetched successfully:', allMembers);
         setFamilyMembers(allMembers || []);
