@@ -13,11 +13,9 @@ export const useFamilyJoining = () => {
     console.log('User ID:', user.id);
 
     try {
-      // Step 1: Find family by code
+      // Step 1: Find family by code using the RLS-bypassing function
       const { data: familyData, error: familyError } = await supabase
-        .from('families')
-        .select('*')
-        .eq('family_code', familyCode.trim())
+        .rpc('find_family_by_code', { code_param: familyCode.trim() })
         .maybeSingle();
 
       console.log('Family lookup result:', { familyData, familyError });
