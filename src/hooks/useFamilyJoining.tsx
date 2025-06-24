@@ -8,35 +8,37 @@ export const useFamilyJoining = () => {
   const joinFamily = async (familyCode: string) => {
     if (!user) return { error: 'No user found' };
 
-    console.log('=== Joining Family ===');
+    console.log('=== JOINING FAMILY ===');
     console.log('Family code:', familyCode);
     console.log('User ID:', user.id);
 
     try {
-      // Use the new RPC function to find family by code (bypasses RLS)
+      // Step 1: Find family by code
       const { data: familyData, error: familyError } = await supabase
-        .rpc('find_family_by_code', { code_param: familyCode.trim() });
+        .from('families')
+        .select('*')
+        .eq('family_code', familyCode.trim())
+        .maybeSingle();
 
-      console.log('Family lookup result:', { data: familyData, error: familyError });
+      console.log('Family lookup result:', { familyData, familyError });
 
       if (familyError) {
         console.error('Error finding family:', familyError);
         return { error: 'Error finding family: ' + familyError.message };
       }
 
-      if (!familyData || familyData.length === 0) {
+      if (!familyData) {
         console.error('No family found with code:', familyCode);
         return { error: 'Invalid family code - no family found' };
       }
 
-      const family = familyData[0];
-      console.log('Family found:', family);
+      console.log('Family found:', familyData);
 
-      // Check if user is already a member
+      // Step 2: Check if user is already a member
       const { data: existingMember, error: checkError } = await supabase
         .from('family_members')
         .select('*')
-        .eq('family_id', family.id)
+        .eq('family_id', familyData.id)
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -47,14 +49,14 @@ export const useFamilyJoining = () => {
 
       if (existingMember) {
         console.log('User is already a member of this family');
-        return { data: family };
+        return { data: familyData };
       }
 
-      // Add user to family
+      // Step 3: Add user to family
       const { error: memberError } = await supabase
         .from('family_members')
         .insert({
-          family_id: family.id,
+          family_id: familyData.id,
           user_id: user.id
         });
 
@@ -64,7 +66,7 @@ export const useFamilyJoining = () => {
       }
 
       console.log('Successfully joined family!');
-      return { data: family };
+      return { data: familyData };
     } catch (error) {
       console.error('Unexpected error joining family:', error);
       return { error: 'An unexpected error occurred' };

@@ -11,32 +11,33 @@ export const useFamilyData = () => {
   const [conversationCompletion, setConversationCompletion] = useState<ConversationCompletion | null>(null);
 
   const fetchFamilyData = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user, resetting family data');
+      setFamily(null);
+      setFamilyMembers([]);
+      setConversationCompletion(null);
+      return;
+    }
 
-    console.log('--- Fetching Family Data ---');
+    console.log('=== FETCHING FAMILY DATA ===');
     console.log('User ID:', user.id);
     
     try {
-      // First, check if user is a family member
-      const { data: memberData, error: memberError } = await supabase
+      // Step 1: Check if user is a member of any family
+      const { data: membershipData, error: membershipError } = await supabase
         .from('family_members')
-        .select(`
-          id,
-          family_id,
-          user_id,
-          joined_at
-        `)
+        .select('family_id')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      console.log('Member data query result:', memberData, memberError);
+      console.log('Membership check result:', { membershipData, membershipError });
 
-      if (memberError) {
-        console.error('Error fetching family membership:', memberError);
+      if (membershipError) {
+        console.error('Error checking family membership:', membershipError);
         return;
       }
 
-      if (!memberData) {
+      if (!membershipData) {
         console.log('User is not a member of any family');
         setFamily(null);
         setFamilyMembers([]);
@@ -44,61 +45,34 @@ export const useFamilyData = () => {
         return;
       }
 
-      console.log('User is a family member:', memberData);
+      const familyId = membershipData.family_id;
+      console.log('User is member of family:', familyId);
 
-      // Try to fetch the family details using direct query first
+      // Step 2: Fetch family details
       const { data: familyData, error: familyError } = await supabase
         .from('families')
         .select('*')
-        .eq('id', memberData.family_id)
-        .maybeSingle();
+        .eq('id', familyId)
+        .single();
 
-      console.log('Direct family query result:', familyData, familyError);
+      console.log('Family data result:', { familyData, familyError });
 
-      if (familyError) {
-        console.error('Error fetching family details:', familyError);
+      if (familyError || !familyData) {
+        console.error('Family not found, cleaning up membership:', familyError);
+        // Clean up orphaned membership
+        await supabase
+          .from('family_members')
+          .delete()
+          .eq('user_id', user.id);
+        
+        setFamily(null);
+        setFamilyMembers([]);
+        setConversationCompletion(null);
         return;
       }
 
-      if (!familyData) {
-        console.log('Family not found via direct query, trying RPC function...');
-        
-        // Try using the RPC function as a fallback
-        const { data: rpcFamilyData, error: rpcError } = await supabase
-          .rpc('find_family_by_code', { code_param: '' })
-          .eq('id', memberData.family_id);
-
-        if (rpcError || !rpcFamilyData || rpcFamilyData.length === 0) {
-          console.error('Family not found even with RPC, cleaning up orphaned record');
-          
-          // Clean up the orphaned family_member record
-          const { error: deleteError } = await supabase
-            .from('family_members')
-            .delete()
-            .eq('user_id', user.id);
-          
-          if (deleteError) {
-            console.error('Error cleaning up orphaned family_member record:', deleteError);
-          } else {
-            console.log('Successfully cleaned up orphaned family_member record');
-          }
-          
-          setFamily(null);
-          setFamilyMembers([]);
-          setConversationCompletion(null);
-          return;
-        }
-
-        // Use the RPC result
-        setFamily(rpcFamilyData[0] as Family);
-        console.log('Family found via RPC:', rpcFamilyData[0]);
-      } else {
-        setFamily(familyData as Family);
-        console.log('Family found via direct query:', familyData);
-      }
-      
-      // Fetch all family members with profiles
-      const { data: allMembers, error: allMembersError } = await supabase
+      // Step 3: Fetch all family members
+      const { data: membersData, error: membersError } = await supabase
         .from('family_members')
         .select(`
           id,
@@ -114,21 +88,35 @@ export const useFamilyData = () => {
             updated_at
           )
         `)
-        .eq('family_id', memberData.family_id);
+        .eq('family_id', familyId);
 
-      if (allMembersError) {
-        console.error('Error fetching family members:', allMembersError);
-        setFamilyMembers([]);
-      } else {
-        console.log('All family members fetched successfully:', allMembers);
-        setFamilyMembers(allMembers || []);
+      console.log('Family members result:', { membersData, membersError });
+
+      // Set the data
+      setFamily(familyData);
+      setFamilyMembers(membersData || []);
+
+      // Step 4: Fetch conversation completion
+      const { data: completionData, error: completionError } = await supabase
+        .from('conversation_completions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('family_id', familyId)
+        .maybeSingle();
+
+      if (!completionError) {
+        setConversationCompletion(completionData);
       }
-      
-      // Fetch conversation completion status
-      await fetchConversationCompletion(memberData.family_id);
+
+      console.log('=== FAMILY DATA FETCH COMPLETE ===');
+      console.log('Family:', familyData);
+      console.log('Members count:', membersData?.length || 0);
       
     } catch (error) {
       console.error('Unexpected error in fetchFamilyData:', error);
+      setFamily(null);
+      setFamilyMembers([]);
+      setConversationCompletion(null);
     }
   };
 
@@ -147,7 +135,6 @@ export const useFamilyData = () => {
       return;
     }
 
-    console.log('Conversation completion status:', data);
     setConversationCompletion(data);
   };
 
