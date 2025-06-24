@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,6 +113,7 @@ const Dashboard = () => {
           </p>
         </div>
 
+        {/* Family Setup Section - Show for both parents and children who aren't in a family */}
         {!family && (
           <div className="mb-8">
             {isParent ? (
@@ -149,6 +151,7 @@ const Dashboard = () => {
           </div>
         )}
 
+        {/* Main Dashboard Content - Show for both parents and children who are in a family */}
         {family && (
           <>
             {/* Stats Cards */}
@@ -156,7 +159,7 @@ const Dashboard = () => {
               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-gray-600">
-                    {isChild ? "Your Family" : "Family Code"}
+                    Family Code
                   </CardTitle>
                   <Users className="h-4 w-4 text-blue-600" />
                 </CardHeader>
@@ -186,7 +189,7 @@ const Dashboard = () => {
               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-gray-600">
-                    {isChild ? "Your Progress" : "Progress"}
+                    Progress
                   </CardTitle>
                   <Calendar className="h-4 w-4 text-purple-600" />
                 </CardHeader>
@@ -201,7 +204,7 @@ const Dashboard = () => {
 
             {/* Main Content */}
             <div className="grid lg:grid-cols-2 gap-8">
-              {/* Active Conversations - Same for both parent and child */}
+              {/* Active Conversations */}
               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="text-xl text-gray-800">
@@ -266,7 +269,7 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Family Members - Same for both parent and child */}
+              {/* Family Members */}
               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="text-xl text-gray-800">
@@ -312,7 +315,7 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            {/* Quick Actions - Same for both parent and child */}
+            {/* Quick Actions */}
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm mt-8">
               <CardHeader>
                 <CardTitle className="text-xl text-gray-800">
