@@ -21,11 +21,9 @@ export const useFamilyOperations = () => {
   const joinFamily = async (familyCode: string) => {
     const result = await joinFamilyBase(familyCode);
     
-    if (result.data) {
-      // Force a refresh of family data after successful join
-      console.log('Refetching family data after successful join...');
-      await fetchFamilyData();
-    }
+    // Always refresh family data after join attempt, regardless of result
+    console.log('Refreshing family data after join attempt...');
+    await fetchFamilyData();
     
     return result;
   };

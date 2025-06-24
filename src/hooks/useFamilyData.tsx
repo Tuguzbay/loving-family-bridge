@@ -17,7 +17,7 @@ export const useFamilyData = () => {
     console.log('User ID:', user.id);
     
     try {
-      // First, check if user is a family member - use maybeSingle to handle no results gracefully
+      // First, check if user is a family member
       const { data: memberData, error: memberError } = await supabase
         .from('family_members')
         .select(`
@@ -46,12 +46,14 @@ export const useFamilyData = () => {
 
       console.log('User is a family member:', memberData);
 
-      // Now fetch the family details using the family_id - use maybeSingle to handle missing family
+      // Try to fetch the family details using direct query first
       const { data: familyData, error: familyError } = await supabase
         .from('families')
         .select('*')
         .eq('id', memberData.family_id)
         .maybeSingle();
+
+      console.log('Direct family query result:', familyData, familyError);
 
       if (familyError) {
         console.error('Error fetching family details:', familyError);
@@ -59,31 +61,41 @@ export const useFamilyData = () => {
       }
 
       if (!familyData) {
-        console.error('Family not found for family_id:', memberData.family_id);
-        console.log('This indicates a data integrity issue - family_member references non-existent family');
-        console.log('Cleaning up the orphaned family_member record and resetting state');
+        console.log('Family not found via direct query, trying RPC function...');
         
-        // Clean up the orphaned family_member record
-        const { error: deleteError } = await supabase
-          .from('family_members')
-          .delete()
-          .eq('user_id', user.id);
-        
-        if (deleteError) {
-          console.error('Error cleaning up orphaned family_member record:', deleteError);
-        } else {
-          console.log('Successfully cleaned up orphaned family_member record');
-        }
-        
-        // Reset all family-related state without forcing reload
-        setFamily(null);
-        setFamilyMembers([]);
-        setConversationCompletion(null);
-        return;
-      }
+        // Try using the RPC function as a fallback
+        const { data: rpcFamilyData, error: rpcError } = await supabase
+          .rpc('find_family_by_code', { code_param: '' })
+          .eq('id', memberData.family_id);
 
-      console.log('Family found:', familyData);
-      setFamily(familyData as Family);
+        if (rpcError || !rpcFamilyData || rpcFamilyData.length === 0) {
+          console.error('Family not found even with RPC, cleaning up orphaned record');
+          
+          // Clean up the orphaned family_member record
+          const { error: deleteError } = await supabase
+            .from('family_members')
+            .delete()
+            .eq('user_id', user.id);
+          
+          if (deleteError) {
+            console.error('Error cleaning up orphaned family_member record:', deleteError);
+          } else {
+            console.log('Successfully cleaned up orphaned family_member record');
+          }
+          
+          setFamily(null);
+          setFamilyMembers([]);
+          setConversationCompletion(null);
+          return;
+        }
+
+        // Use the RPC result
+        setFamily(rpcFamilyData[0] as Family);
+        console.log('Family found via RPC:', rpcFamilyData[0]);
+      } else {
+        setFamily(familyData as Family);
+        console.log('Family found via direct query:', familyData);
+      }
       
       // Fetch all family members with profiles
       const { data: allMembers, error: allMembersError } = await supabase
