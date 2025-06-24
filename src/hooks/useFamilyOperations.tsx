@@ -24,9 +24,12 @@ export const useFamilyOperations = () => {
     
     console.log('Join result:', result);
     
-    // Always refresh family data after join attempt
-    console.log('Refreshing family data...');
-    await fetchFamilyData();
+    if (result.data) {
+      console.log('Join successful, refreshing family data...');
+      // Force a refresh of family data
+      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay to ensure DB consistency
+      await fetchFamilyData();
+    }
     
     return result;
   };
@@ -38,7 +41,9 @@ export const useFamilyOperations = () => {
     console.log('Create result:', result);
     
     if (result.data) {
-      console.log('Refreshing family data after creation...');
+      console.log('Create successful, refreshing family data...');
+      // Force a refresh of family data
+      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay to ensure DB consistency
       await fetchFamilyData();
     }
     

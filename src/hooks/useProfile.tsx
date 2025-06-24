@@ -51,6 +51,12 @@ export const useProfile = () => {
     }
   }, [user, profile]);
 
+  // Add a force refresh function
+  const refreshFamilyData = async () => {
+    console.log('Force refreshing family data...');
+    await fetchFamilyData();
+  };
+
   return {
     profile,
     family,
@@ -59,6 +65,6 @@ export const useProfile = () => {
     loading,
     createFamily,
     joinFamily,
-    refetch: fetchFamilyData
+    refetch: refreshFamilyData
   };
 };

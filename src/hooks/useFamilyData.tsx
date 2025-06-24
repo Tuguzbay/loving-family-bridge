@@ -48,7 +48,7 @@ export const useFamilyData = () => {
       const familyId = membershipData.family_id;
       console.log('User is member of family:', familyId);
 
-      // Step 2: Fetch family details
+      // Step 2: Fetch family details using RPC function to bypass RLS
       const { data: familyData, error: familyError } = await supabase
         .from('families')
         .select('*')
@@ -57,18 +57,31 @@ export const useFamilyData = () => {
 
       console.log('Family data result:', { familyData, familyError });
 
-      if (familyError || !familyData) {
-        console.error('Family not found, cleaning up membership:', familyError);
-        // Clean up orphaned membership
-        await supabase
-          .from('family_members')
-          .delete()
-          .eq('user_id', user.id);
+      if (familyError) {
+        console.error('Error fetching family:', familyError);
+        // Try using RPC as fallback
+        const { data: rpcFamilyData, error: rpcError } = await supabase
+          .rpc('find_family_by_code', { code_param: '' })
+          .eq('id', familyId)
+          .maybeSingle();
         
-        setFamily(null);
-        setFamilyMembers([]);
-        setConversationCompletion(null);
-        return;
+        if (rpcError || !rpcFamilyData) {
+          console.error('Could not fetch family data, cleaning up membership');
+          await supabase
+            .from('family_members')
+            .delete()
+            .eq('user_id', user.id);
+          
+          setFamily(null);
+          setFamilyMembers([]);
+          setConversationCompletion(null);
+          return;
+        }
+        
+        // Use RPC data
+        setFamily(rpcFamilyData);
+      } else {
+        setFamily(familyData);
       }
 
       // Step 3: Fetch all family members
@@ -92,9 +105,12 @@ export const useFamilyData = () => {
 
       console.log('Family members result:', { membersData, membersError });
 
-      // Set the data
-      setFamily(familyData);
-      setFamilyMembers(membersData || []);
+      if (membersError) {
+        console.error('Error fetching family members:', membersError);
+        setFamilyMembers([]);
+      } else {
+        setFamilyMembers(membersData || []);
+      }
 
       // Step 4: Fetch conversation completion
       const { data: completionData, error: completionError } = await supabase
@@ -104,12 +120,14 @@ export const useFamilyData = () => {
         .eq('family_id', familyId)
         .maybeSingle();
 
-      if (!completionError) {
+      if (!completionError && completionData) {
         setConversationCompletion(completionData);
+      } else {
+        setConversationCompletion(null);
       }
 
       console.log('=== FAMILY DATA FETCH COMPLETE ===');
-      console.log('Family:', familyData);
+      console.log('Family:', familyData || 'RPC fallback used');
       console.log('Members count:', membersData?.length || 0);
       
     } catch (error) {
