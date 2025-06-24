@@ -57,16 +57,19 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
 
       const familyId = membershipData.family_id;
 
-      // Fetch family using RPC to bypass RLS
-      const { data: familyData, error: familyError } = await supabase
-        .rpc('find_family_by_code', { code_param: '' })
-        .eq('id', familyId)
-        .maybeSingle();
+      // First try to get family code from family_members by querying all families and matching
+      const { data: allFamilies, error: allFamiliesError } = await supabase
+        .rpc('find_family_by_code', { code_param: '' });
 
-      console.log('Family data:', { familyData, familyError });
+      console.log('All families RPC result:', { allFamilies, allFamiliesError });
 
-      if (familyError || !familyData) {
-        console.error('Could not fetch family data');
+      let familyData = null;
+      if (allFamilies && Array.isArray(allFamilies)) {
+        familyData = allFamilies.find(f => f.id === familyId);
+      }
+
+      if (!familyData) {
+        console.log('Could not find family data for ID:', familyId);
         setFamily(null);
         setFamilyMembers([]);
         setConversationCompletion(null);
@@ -74,6 +77,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      console.log('Found family data:', familyData);
       setFamily(familyData);
 
       // Fetch family members
