@@ -57,19 +57,42 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
 
       const familyId = membershipData.family_id;
 
-      // First try to get family code from family_members by querying all families and matching
-      const { data: allFamilies, error: allFamiliesError } = await supabase
-        .rpc('find_family_by_code', { code_param: '' });
+      // Try direct family query first
+      const { data: directFamilyData, error: directFamilyError } = await supabase
+        .from('families')
+        .select('*')
+        .eq('id', familyId)
+        .maybeSingle();
 
-      console.log('All families RPC result:', { allFamilies, allFamiliesError });
+      console.log('Direct family query result:', { directFamilyData, directFamilyError });
 
-      let familyData = null;
-      if (allFamilies && Array.isArray(allFamilies)) {
-        familyData = allFamilies.find(f => f.id === familyId);
+      let familyData = directFamilyData;
+
+      // If direct query fails due to RLS, try to get all families and filter
+      if (directFamilyError || !directFamilyData) {
+        console.log('Direct query failed, trying RPC fallback');
+        
+        // Get all families the user has access to via find_family_by_code
+        const { data: allFamiliesData, error: allFamiliesError } = await supabase
+          .rpc('find_family_by_code', { code_param: '' });
+
+        console.log('RPC fallback result:', { allFamiliesData, allFamiliesError });
+
+        if (allFamiliesData && Array.isArray(allFamiliesData) && allFamiliesData.length > 0) {
+          // Find the family by matching with our membership
+          familyData = allFamiliesData.find(f => f.id === familyId) || null;
+        }
       }
 
       if (!familyData) {
         console.log('Could not find family data for ID:', familyId);
+        // Clean up orphaned membership
+        await supabase
+          .from('family_members')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('family_id', familyId);
+        
         setFamily(null);
         setFamilyMembers([]);
         setConversationCompletion(null);
