@@ -75,13 +75,10 @@ export const useFamilyData = () => {
           console.log('Successfully cleaned up orphaned family_member record');
         }
         
-        // Reset all family-related state
+        // Reset all family-related state without forcing reload
         setFamily(null);
         setFamilyMembers([]);
         setConversationCompletion(null);
-        
-        // Force a page refresh to clear any cached state
-        window.location.reload();
         return;
       }
 
