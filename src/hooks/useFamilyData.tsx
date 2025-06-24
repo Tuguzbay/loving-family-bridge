@@ -61,15 +61,27 @@ export const useFamilyData = () => {
       if (!familyData) {
         console.error('Family not found for family_id:', memberData.family_id);
         console.log('This indicates a data integrity issue - family_member references non-existent family');
+        console.log('Cleaning up the orphaned family_member record and resetting state');
+        
         // Clean up the orphaned family_member record
-        await supabase
+        const { error: deleteError } = await supabase
           .from('family_members')
           .delete()
           .eq('user_id', user.id);
         
+        if (deleteError) {
+          console.error('Error cleaning up orphaned family_member record:', deleteError);
+        } else {
+          console.log('Successfully cleaned up orphaned family_member record');
+        }
+        
+        // Reset all family-related state
         setFamily(null);
         setFamilyMembers([]);
         setConversationCompletion(null);
+        
+        // Force a page refresh to clear any cached state
+        window.location.reload();
         return;
       }
 
