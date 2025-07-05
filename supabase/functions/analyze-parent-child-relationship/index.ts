@@ -2,7 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const huggingFaceToken = Deno.env.get('HUGGING_FACE_TOKEN');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,23 +67,34 @@ A few sentences summarizing the parent's emotional state, confusion, and intenti
 *Conclusion for Parent:*  
 [Encouraging, emotionally intelligent message]`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${huggingFaceToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
+        inputs: prompt,
+        parameters: {
+          max_new_tokens: 1000,
+          temperature: 0.7,
+          top_p: 0.9,
+          return_full_text: false
+        }
       }),
     });
 
     const data = await response.json();
-    const analysis = data.choices[0].message.content;
+    
+    // Handle Hugging Face response format
+    let analysis;
+    if (Array.isArray(data) && data[0]?.generated_text) {
+      analysis = data[0].generated_text;
+    } else if (data.generated_text) {
+      analysis = data.generated_text;
+    } else {
+      throw new Error('Unexpected response format from Hugging Face');
+    }
 
     return new Response(JSON.stringify({ analysis }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
