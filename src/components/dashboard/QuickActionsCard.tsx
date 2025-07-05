@@ -63,6 +63,12 @@ export const QuickActionsCard = ({
                   const parentCompleted = childAssessments[child.profiles.id] || false;
                   const childCompleted = childCompletions[child.profiles.id] || false;
                   const hasInsights = parentCompleted && childCompleted;
+                  
+                  console.log(`Insight availability for ${child.profiles.full_name}:`, {
+                    parentCompleted,
+                    childCompleted, 
+                    hasInsights
+                  });
                   return (
                     <Button 
                       key={child.profiles.id}

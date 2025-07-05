@@ -57,12 +57,16 @@ const Dashboard = () => {
       const assessmentStatus: Record<string, boolean> = {};
       const completionStatus: Record<string, boolean> = {};
       
+      console.log('Loading completion data for children:', children.map(c => c.profiles.full_name));
+      
       for (const child of children) {
         // Check parent-child assessment completion
         if (profile.user_type === 'parent') {
           const assessment = await getAssessment(child.profiles.id);
-          assessmentStatus[child.profiles.id] = !!assessment && 
+          const hasParentResponses = !!assessment && 
             assessment.parent_responses.short.length > 0;
+          assessmentStatus[child.profiles.id] = hasParentResponses;
+          console.log(`Parent assessment for ${child.profiles.full_name}:`, hasParentResponses, assessment);
         }
         
         // Check child's conversation completion
@@ -73,8 +77,13 @@ const Dashboard = () => {
           .eq('family_id', family.id)
           .maybeSingle();
         
-        completionStatus[child.profiles.id] = !!childCompletion;
+        const hasChildCompletion = !!childCompletion;
+        completionStatus[child.profiles.id] = hasChildCompletion;
+        console.log(`Child completion for ${child.profiles.full_name}:`, hasChildCompletion, childCompletion);
       }
+      
+      console.log('Final assessment status:', assessmentStatus);
+      console.log('Final completion status:', completionStatus);
       
       setChildAssessments(assessmentStatus);
       setChildCompletions(completionStatus);
