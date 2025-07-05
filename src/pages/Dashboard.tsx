@@ -27,6 +27,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isCreatingFamily, setIsCreatingFamily] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const loading = profileLoading || familyLoading;
 
@@ -73,29 +74,37 @@ const Dashboard = () => {
   const handleJoinFamily = async (familyCode: string) => {
     console.log('Dashboard: Starting join family process...');
     
-    const result = await joinFamily(familyCode);
-    
-    if (result.error) {
-      toast({
-        title: "Failed to Join Family",
-        description: result.error,
-        variant: "destructive"
-      });
-    } else {
+    try {
+      const result = await joinFamily(familyCode);
+      
+      if (result.error) {
+        toast({
+          title: "Failed to Join Family",
+          description: result.error,
+          variant: "destructive"
+        });
+        return { error: result.error };
+      }
+
       console.log('Dashboard: Family joined successfully, showing success toast');
       toast({
         title: "Successfully Joined Family! 🎉",
         description: "Welcome to your family! You can now start the conversation.",
       });
+
+      // Ensure UI updates by forcing a state refresh
+      setRefreshKey(prev => prev + 1);
       
-      // Additional refresh to ensure UI updates immediately
-      console.log('Dashboard: Triggering additional refresh...');
-      setTimeout(() => {
-        refreshFamilyData();
-      }, 500);
+      return { data: result.data };
+    } catch (error) {
+      console.error('Error in handleJoinFamily:', error);
+      toast({
+        title: "Unexpected Error",
+        description: "Something went wrong while joining the family.",
+        variant: "destructive"
+      });
+      return { error: 'An unexpected error occurred' };
     }
-    
-    return result;
   };
 
   if (loading || !profile) {
@@ -118,7 +127,8 @@ const Dashboard = () => {
     isChild, 
     family: family?.family_code, 
     familyMembers: familyMembers.length,
-    hasCompletedConversation 
+    hasCompletedConversation,
+    refreshKey
   });
 
   return (
@@ -158,8 +168,8 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Family Setup Section - Show only if user isn't in a family */}
-        {!family && (
+        {/* Family Setup Section - Show only if user isn't in a family and not loading */}
+        {!familyLoading && !family && (
           <div className="mb-8">
             {isParent ? (
               <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">

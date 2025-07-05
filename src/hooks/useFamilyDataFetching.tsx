@@ -12,19 +12,19 @@ export const useFamilyDataFetching = () => {
     setConversationCompletion: (completion: ConversationCompletion | null) => void,
     setLoading: (loading: boolean) => void
   ) => {
-    if (!user) {
-      console.log('No user, clearing family data');
-      setFamily(null);
-      setFamilyMembers([]);
-      setConversationCompletion(null);
-      setLoading(false);
-      return;
-    }
-
-    console.log('=== FETCHING FAMILY DATA ===');
     setLoading(true);
-
+    
     try {
+      if (!user) {
+        console.log('No user, clearing family data');
+        setFamily(null);
+        setFamilyMembers([]);
+        setConversationCompletion(null);
+        return;
+      }
+
+      console.log('=== FETCHING FAMILY DATA ===');
+
       // Check if user is a member of any family
       const { data: membershipData, error: membershipError } = await supabase
         .from('family_members')
@@ -39,7 +39,6 @@ export const useFamilyDataFetching = () => {
         setFamily(null);
         setFamilyMembers([]);
         setConversationCompletion(null);
-        setLoading(false);
         return;
       }
 
@@ -84,7 +83,6 @@ export const useFamilyDataFetching = () => {
         setFamily(null);
         setFamilyMembers([]);
         setConversationCompletion(null);
-        setLoading(false);
         return;
       }
 

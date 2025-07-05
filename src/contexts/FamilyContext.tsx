@@ -48,14 +48,11 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     
     if (result.data) {
       console.log('FamilyContext: Successfully joined family, refreshing data...');
-      // Immediately refresh data
-      await refreshFamilyData();
+      // Update the family state immediately with the joined family
+      setFamily(result.data);
       
-      // Force another refresh after a short delay to ensure UI updates
-      setTimeout(async () => {
-        console.log('FamilyContext: Secondary refresh after join...');
-        await refreshFamilyData();
-      }, 100);
+      // Then refresh all data
+      await refreshFamilyData();
     }
     
     return result;
@@ -71,6 +68,16 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     console.log('FamilyContext: User changed, fetching family data...');
     fetchFamilyData(setFamily, setFamilyMembers, setConversationCompletion, setLoading);
   }, [user]);
+
+  // Add debugging to track state changes
+  useEffect(() => {
+    console.log('Family state updated:', {
+      family: family?.family_code,
+      loading,
+      familyMembers: familyMembers.length,
+      user: user?.id
+    });
+  }, [family, loading, familyMembers, user]);
 
   return (
     <FamilyContext.Provider value={{
