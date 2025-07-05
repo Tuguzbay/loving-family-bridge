@@ -1,288 +1,65 @@
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { createContext, useContext, useEffect, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import type { Family, FamilyMember, ConversationCompletion } from '@/types/profile';
-
-interface FamilyContextType {
-  family: Family | null;
-  familyMembers: FamilyMember[];
-  conversationCompletion: ConversationCompletion | null;
-  loading: boolean;
-  createFamily: () => Promise<{ error?: string; data?: any }>;
-  joinFamily: (familyCode: string) => Promise<{ error?: string; data?: any }>;
-  refreshFamilyData: () => Promise<void>;
-}
+import { useFamilyState } from '@/hooks/useFamilyState';
+import { useFamilyDataFetching } from '@/hooks/useFamilyDataFetching';
+import { useFamilyActions } from '@/hooks/useFamilyActions';
+import type { FamilyContextType } from './types';
 
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined);
 
 export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const [family, setFamily] = useState<Family | null>(null);
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
-  const [conversationCompletion, setConversationCompletion] = useState<ConversationCompletion | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    family,
+    familyMembers,
+    conversationCompletion,
+    loading,
+    setFamily,
+    setFamilyMembers,
+    setConversationCompletion,
+    setLoading,
+    resetFamilyState
+  } = useFamilyState();
 
-  const fetchFamilyData = async () => {
-    if (!user) {
-      console.log('No user, clearing family data');
-      setFamily(null);
-      setFamilyMembers([]);
-      setConversationCompletion(null);
-      setLoading(false);
-      return;
-    }
-
-    console.log('=== FETCHING FAMILY DATA ===');
-    setLoading(true);
-
-    try {
-      // Check if user is a member of any family
-      const { data: membershipData, error: membershipError } = await supabase
-        .from('family_members')
-        .select('family_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      console.log('Membership check:', { membershipData, membershipError });
-
-      if (membershipError || !membershipData) {
-        console.log('User is not a member of any family');
-        setFamily(null);
-        setFamilyMembers([]);
-        setConversationCompletion(null);
-        setLoading(false);
-        return;
-      }
-
-      const familyId = membershipData.family_id;
-
-      // Try direct family query first
-      const { data: directFamilyData, error: directFamilyError } = await supabase
-        .from('families')
-        .select('*')
-        .eq('id', familyId)
-        .maybeSingle();
-
-      console.log('Direct family query result:', { directFamilyData, directFamilyError });
-
-      let familyData = directFamilyData;
-
-      // If direct query fails due to RLS, try to get all families and filter
-      if (directFamilyError || !directFamilyData) {
-        console.log('Direct query failed, trying RPC fallback');
-        
-        // Get all families the user has access to via find_family_by_code
-        const { data: allFamiliesData, error: allFamiliesError } = await supabase
-          .rpc('find_family_by_code', { code_param: '' });
-
-        console.log('RPC fallback result:', { allFamiliesData, allFamiliesError });
-
-        if (allFamiliesData && Array.isArray(allFamiliesData) && allFamiliesData.length > 0) {
-          // Find the family by matching with our membership
-          familyData = allFamiliesData.find(f => f.id === familyId) || null;
-        }
-      }
-
-      if (!familyData) {
-        console.log('Could not find family data for ID:', familyId);
-        // Clean up orphaned membership
-        await supabase
-          .from('family_members')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('family_id', familyId);
-        
-        setFamily(null);
-        setFamilyMembers([]);
-        setConversationCompletion(null);
-        setLoading(false);
-        return;
-      }
-
-      console.log('Found family data:', familyData);
-      setFamily(familyData);
-
-      // Fetch family members
-      const { data: membersData, error: membersError } = await supabase
-        .from('family_members')
-        .select(`
-          id,
-          family_id,
-          user_id,
-          joined_at,
-          profiles!inner (
-            id,
-            full_name,
-            user_type,
-            age,
-            created_at,
-            updated_at
-          )
-        `)
-        .eq('family_id', familyId);
-
-      console.log('Members data:', { membersData, membersError });
-
-      if (membersError) {
-        console.error('Error fetching family members:', membersError);
-        setFamilyMembers([]);
-      } else {
-        setFamilyMembers(membersData || []);
-      }
-
-      // Fetch conversation completion
-      const { data: completionData, error: completionError } = await supabase
-        .from('conversation_completions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('family_id', familyId)
-        .maybeSingle();
-
-      if (!completionError && completionData) {
-        setConversationCompletion(completionData);
-      } else {
-        setConversationCompletion(null);
-      }
-
-      console.log('=== FAMILY DATA LOADED ===');
-      console.log('Family:', familyData.family_code);
-      console.log('Members:', membersData?.length || 0);
-
-    } catch (error) {
-      console.error('Error in fetchFamilyData:', error);
-      setFamily(null);
-      setFamilyMembers([]);
-      setConversationCompletion(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const createFamily = async () => {
-    if (!user) return { error: 'No user found' };
-
-    console.log('=== CREATING FAMILY ===');
-
-    try {
-      // Generate family code
-      const { data: codeData, error: codeError } = await supabase
-        .rpc('generate_family_code');
-
-      if (codeError) {
-        console.error('Error generating family code:', codeError);
-        return { error: codeError.message };
-      }
-
-      // Create family
-      const { data: familyData, error: familyError } = await supabase
-        .from('families')
-        .insert({
-          family_code: codeData,
-          parent_id: user.id
-        })
-        .select()
-        .single();
-
-      if (familyError) {
-        console.error('Error creating family:', familyError);
-        return { error: familyError.message };
-      }
-
-      // Add parent to family_members
-      const { error: memberError } = await supabase
-        .from('family_members')
-        .insert({
-          family_id: familyData.id,
-          user_id: user.id
-        });
-
-      if (memberError) {
-        console.error('Error adding parent to family_members:', memberError);
-        return { error: memberError.message };
-      }
-
-      console.log('Family created successfully');
-      
-      // Immediately refresh data
-      await fetchFamilyData();
-      
-      return { data: familyData };
-    } catch (error) {
-      console.error('Error creating family:', error);
-      return { error: 'An unexpected error occurred' };
-    }
-  };
-
-  const joinFamily = async (familyCode: string) => {
-    if (!user) return { error: 'No user found' };
-
-    console.log('=== JOINING FAMILY ===');
-    console.log('Family code:', familyCode);
-
-    try {
-      // Find family by code
-      const { data: familyData, error: familyError } = await supabase
-        .rpc('find_family_by_code', { code_param: familyCode.trim() })
-        .maybeSingle();
-
-      if (familyError || !familyData) {
-        console.error('Family not found:', familyError);
-        return { error: 'Invalid family code - no family found' };
-      }
-
-      // Check if already a member
-      const { data: existingMember, error: checkError } = await supabase
-        .from('family_members')
-        .select('*')
-        .eq('family_id', familyData.id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error('Error checking membership:', checkError);
-        return { error: 'Error checking family membership' };
-      }
-
-      if (existingMember) {
-        console.log('Already a member');
-        await fetchFamilyData();
-        return { data: familyData };
-      }
-
-      // Join family
-      const { error: memberError } = await supabase
-        .from('family_members')
-        .insert({
-          family_id: familyData.id,
-          user_id: user.id
-        });
-
-      if (memberError) {
-        console.error('Error joining family:', memberError);
-        return { error: 'Failed to join family: ' + memberError.message };
-      }
-
-      console.log('Successfully joined family');
-      
-      // Immediately refresh data
-      await fetchFamilyData();
-      
-      return { data: familyData };
-    } catch (error) {
-      console.error('Error joining family:', error);
-      return { error: 'An unexpected error occurred' };
-    }
-  };
+  const { fetchFamilyData } = useFamilyDataFetching();
+  const { createFamily: createFamilyAction, joinFamily: joinFamilyAction } = useFamilyActions();
 
   const refreshFamilyData = async () => {
     console.log('Manually refreshing family data...');
-    await fetchFamilyData();
+    await fetchFamilyData(setFamily, setFamilyMembers, setConversationCompletion, setLoading);
+  };
+
+  const createFamily = async () => {
+    const result = await createFamilyAction();
+    
+    if (result.data) {
+      // Immediately refresh data
+      await refreshFamilyData();
+    }
+    
+    return result;
+  };
+
+  const joinFamily = async (familyCode: string) => {
+    const result = await joinFamilyAction(familyCode);
+    
+    if (result.data) {
+      // Immediately refresh data
+      await refreshFamilyData();
+    }
+    
+    return result;
   };
 
   // Initial load when user changes
   useEffect(() => {
-    fetchFamilyData();
+    if (!user) {
+      resetFamilyState();
+      return;
+    }
+    
+    fetchFamilyData(setFamily, setFamilyMembers, setConversationCompletion, setLoading);
   }, [user]);
 
   return (
