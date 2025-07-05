@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Heart, MessageCircle, Users, Calendar, ArrowRight, User, LogOut, Star } from "lucide-react";
+import { Heart, MessageCircle, Users, ArrowRight, User, LogOut, Star, Copy, Check } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useSimpleProfile } from "@/hooks/useSimpleProfile";
@@ -12,6 +12,7 @@ import { useFamily } from "@/contexts/FamilyContext";
 import { useToast } from "@/hooks/use-toast";
 import { FamilyCodeInput } from "@/components/FamilyCodeInput";
 import { ParentChildConversation } from "@/components/ParentChildConversation";
+import { InsightViewer } from "@/components/InsightViewer";
 import { useParentChildAssessment } from "@/hooks/useParentChildAssessment";
 import type { Profile } from "@/types/profile";
 
@@ -34,6 +35,8 @@ const Dashboard = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedChild, setSelectedChild] = useState<Profile | null>(null);
   const [childAssessments, setChildAssessments] = useState<Record<string, boolean>>({});
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [selectedInsightChild, setSelectedInsightChild] = useState<Profile | null>(null);
 
   const loading = profileLoading || familyLoading;
 
@@ -112,6 +115,26 @@ const Dashboard = () => {
     }
   };
 
+  const handleCopyFamilyCode = async () => {
+    if (family?.family_code) {
+      try {
+        await navigator.clipboard.writeText(family.family_code);
+        setCopiedCode(true);
+        toast({
+          title: "Family Code Copied!",
+          description: "The family code has been copied to your clipboard.",
+        });
+        setTimeout(() => setCopiedCode(false), 2000);
+      } catch (error) {
+        toast({
+          title: "Copy Failed",
+          description: "Please manually copy the family code.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   const handleJoinFamily = async (familyCode: string) => {
     console.log('Dashboard: Starting join family process...');
     
@@ -171,6 +194,17 @@ const Dashboard = () => {
     hasCompletedConversation,
     refreshKey
   });
+
+  // Show insight viewer if selected
+  if (selectedInsightChild && family) {
+    return (
+      <InsightViewer 
+        child={selectedInsightChild}
+        familyId={family.id}
+        onBack={() => setSelectedInsightChild(null)}
+      />
+    );
+  }
 
   // Show parent-child conversation if selected
   if (selectedChild && family) {
@@ -269,8 +303,20 @@ const Dashboard = () => {
               <Users className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-800">
-                {family?.family_code || (isChild ? "Not Connected" : "Not Created")}
+              <div className="flex items-center justify-between">
+                <div className="text-2xl font-bold text-gray-800">
+                  {family?.family_code || (isChild ? "Not Connected" : "Not Created")}
+                </div>
+                {family?.family_code && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopyFamilyCode}
+                    className="text-blue-600 hover:text-blue-700"
+                  >
+                    {copiedCode ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                )}
               </div>
               <p className="text-xs text-gray-500 mt-2">
                 {family ? (isChild ? "Your family code" : "Share with family members") : (isChild ? "Join a family first" : "Create a family first")}
@@ -298,7 +344,7 @@ const Dashboard = () => {
               <CardTitle className="text-sm font-medium text-gray-600">
                 Progress
               </CardTitle>
-              <Calendar className="h-4 w-4 text-purple-600" />
+              <Progress className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-800">{conversationProgress}%</div>
@@ -494,7 +540,7 @@ const Dashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 gap-4">
               {!hasCompletedConversation ? (
                 <Link to="/conversation">
                   <Button variant="outline" className="h-20 flex-col space-y-2 w-full">
@@ -508,14 +554,34 @@ const Dashboard = () => {
                   <span>Assessment Complete</span>
                 </Button>
               )}
-              <Button variant="outline" className="h-20 flex-col space-y-2" disabled={!hasCompletedConversation}>
-                <Heart className="h-6 w-6 text-red-500" />
-                <span>{isChild ? "Family Insights" : "View Insights"}</span>
-              </Button>
-              <Button variant="outline" className="h-20 flex-col space-y-2" disabled>
-                <Calendar className="h-6 w-6 text-purple-600" />
-                <span>{isChild ? "Family Time" : "Schedule Family Time"}</span>
-              </Button>
+              {isParent && family && familyMembers.some(member => member.profiles.user_type === 'child') ? (
+                <div className="space-y-2">
+                  {familyMembers
+                    .filter(member => member.profiles.user_type === 'child')
+                    .map((child) => {
+                      const isCompleted = childAssessments[child.profiles.id];
+                      // TODO: Check if child has also completed their assessment
+                      const hasInsights = isCompleted; // Placeholder - need to check child completion too
+                      return (
+                        <Button 
+                          key={child.profiles.id}
+                          variant="outline" 
+                          className="h-20 flex-col space-y-2 w-full" 
+                          disabled={!hasInsights}
+                          onClick={() => setSelectedInsightChild(child.profiles)}
+                        >
+                          <Heart className="h-6 w-6 text-red-500" />
+                          <span>Insights for {child.profiles.full_name}</span>
+                        </Button>
+                      );
+                    })}
+                </div>
+              ) : (
+                <Button variant="outline" className="h-20 flex-col space-y-2" disabled={!hasCompletedConversation}>
+                  <Heart className="h-6 w-6 text-red-500" />
+                  <span>{isChild ? "Family Insights" : "View Insights"}</span>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
