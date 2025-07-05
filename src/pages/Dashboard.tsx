@@ -21,7 +21,8 @@ const Dashboard = () => {
     conversationCompletion, 
     loading: familyLoading, 
     createFamily, 
-    joinFamily 
+    joinFamily,
+    refreshFamilyData
   } = useFamily();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -83,6 +84,8 @@ const Dashboard = () => {
         title: "Successfully Joined Family! 🎉",
         description: "Welcome to your family! You can now start the conversation.",
       });
+      // Force refresh the family data to update the UI immediately
+      await refreshFamilyData();
     }
     
     return result;
