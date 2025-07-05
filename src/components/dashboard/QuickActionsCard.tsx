@@ -10,6 +10,8 @@ interface QuickActionsCardProps {
   hasCompletedConversation: boolean;
   family: any;
   familyMembers: any[];
+  childAssessments: Record<string, boolean>;
+  childCompletions: Record<string, boolean>;
   onSelectInsightChild: (child: Profile) => void;
 }
 
@@ -19,6 +21,8 @@ export const QuickActionsCard = ({
   hasCompletedConversation, 
   family, 
   familyMembers, 
+  childAssessments,
+  childCompletions,
   onSelectInsightChild 
 }: QuickActionsCardProps) => {
   return (
@@ -55,8 +59,10 @@ export const QuickActionsCard = ({
               {familyMembers
                 .filter(member => member.profiles.user_type === 'child')
                 .map((child) => {
-                  // TODO: Check if child has also completed their assessment
-                  const hasInsights = hasCompletedConversation; // Placeholder - need to check child completion too
+                  // Check if both parent and child have completed their assessments
+                  const parentCompleted = childAssessments[child.profiles.id] || false;
+                  const childCompleted = childCompletions[child.profiles.id] || false;
+                  const hasInsights = parentCompleted && childCompleted;
                   return (
                     <Button 
                       key={child.profiles.id}

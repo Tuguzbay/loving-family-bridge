@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ParentChildConversation } from "@/components/ParentChildConversation";
 import { InsightViewer } from "@/components/InsightViewer";
 import { useParentChildAssessment } from "@/hooks/useParentChildAssessment";
+import { supabase } from "@/integrations/supabase/client";
 import { FamilySetupCard } from "@/components/dashboard/FamilySetupCard";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { ConversationsCard } from "@/components/dashboard/ConversationsCard";
@@ -37,6 +38,7 @@ const Dashboard = () => {
   const [selectedChild, setSelectedChild] = useState<Profile | null>(null);
   const [selectedInsightChild, setSelectedInsightChild] = useState<Profile | null>(null);
   const [childAssessments, setChildAssessments] = useState<Record<string, boolean>>({});
+  const [childCompletions, setChildCompletions] = useState<Record<string, boolean>>({});
 
   const loading = profileLoading || familyLoading;
 
@@ -46,24 +48,39 @@ const Dashboard = () => {
     }
   }, [user, loading, navigate]);
 
-  // Load parent-child assessment status for each child
+  // Load parent-child assessment status and child conversation completions
   useEffect(() => {
-    const loadAssessmentStatus = async () => {
-      if (!family || !profile || profile.user_type !== 'parent') return;
+    const loadCompletionData = async () => {
+      if (!family || !profile) return;
       
       const children = familyMembers.filter(member => member.profiles.user_type === 'child');
       const assessmentStatus: Record<string, boolean> = {};
+      const completionStatus: Record<string, boolean> = {};
       
       for (const child of children) {
-        const assessment = await getAssessment(child.profiles.id);
-        assessmentStatus[child.profiles.id] = !!assessment && 
-          assessment.parent_responses.short.length > 0;
+        // Check parent-child assessment completion
+        if (profile.user_type === 'parent') {
+          const assessment = await getAssessment(child.profiles.id);
+          assessmentStatus[child.profiles.id] = !!assessment && 
+            assessment.parent_responses.short.length > 0;
+        }
+        
+        // Check child's conversation completion
+        const { data: childCompletion } = await supabase
+          .from('conversation_completions')
+          .select('*')
+          .eq('user_id', child.profiles.id)
+          .eq('family_id', family.id)
+          .maybeSingle();
+        
+        completionStatus[child.profiles.id] = !!childCompletion;
       }
       
       setChildAssessments(assessmentStatus);
+      setChildCompletions(completionStatus);
     };
 
-    loadAssessmentStatus();
+    loadCompletionData();
   }, [family, familyMembers, profile, getAssessment]);
 
   const handleParentChildComplete = () => {
@@ -274,6 +291,8 @@ const Dashboard = () => {
           hasCompletedConversation={hasCompletedConversation}
           family={family}
           familyMembers={familyMembers}
+          childAssessments={childAssessments}
+          childCompletions={childCompletions}
           onSelectInsightChild={setSelectedInsightChild}
         />
       </div>
