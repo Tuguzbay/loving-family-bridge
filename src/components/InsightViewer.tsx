@@ -22,6 +22,9 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
       setLoading(true);
       try {
         const data = await getAssessment(child.id);
+        console.log('Assessment data loaded for insights:', data);
+        console.log('AI analysis exists:', !!data?.ai_analysis);
+        console.log('AI analysis content:', data?.ai_analysis);
         setAssessment(data);
       } catch (error) {
         console.error('Error loading assessment:', error);
@@ -44,7 +47,7 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
     );
   }
 
-  if (!assessment || !assessment.ai_analysis) {
+  if (!assessment || (!assessment.ai_analysis && !assessment.ai_analysis?.analysis)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
         <div className="max-w-2xl mx-auto">
@@ -70,7 +73,9 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
   }
 
   // Parse the AI analysis to extract sections for parent and child
-  const analysisText = assessment.ai_analysis;
+  const analysisText = typeof assessment.ai_analysis === 'string' 
+    ? assessment.ai_analysis 
+    : assessment.ai_analysis?.analysis || assessment.ai_analysis;
   const sections = parseAnalysis(analysisText);
 
   return (
