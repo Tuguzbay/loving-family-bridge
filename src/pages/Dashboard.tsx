@@ -11,6 +11,9 @@ import { useSimpleProfile } from "@/hooks/useSimpleProfile";
 import { useFamily } from "@/contexts/FamilyContext";
 import { useToast } from "@/hooks/use-toast";
 import { FamilyCodeInput } from "@/components/FamilyCodeInput";
+import { ParentChildConversation } from "@/components/ParentChildConversation";
+import { useParentChildAssessment } from "@/hooks/useParentChildAssessment";
+import type { Profile } from "@/types/profile";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -26,8 +29,11 @@ const Dashboard = () => {
   } = useFamily();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { getAssessment } = useParentChildAssessment();
   const [isCreatingFamily, setIsCreatingFamily] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedChild, setSelectedChild] = useState<Profile | null>(null);
+  const [childAssessments, setChildAssessments] = useState<Record<string, boolean>>({});
 
   const loading = profileLoading || familyLoading;
 
@@ -36,6 +42,41 @@ const Dashboard = () => {
       navigate("/login");
     }
   }, [user, loading, navigate]);
+
+  // Load parent-child assessment status for each child
+  useEffect(() => {
+    const loadAssessmentStatus = async () => {
+      if (!family || !profile || profile.user_type !== 'parent') return;
+      
+      const children = familyMembers.filter(member => member.profiles.user_type === 'child');
+      const assessmentStatus: Record<string, boolean> = {};
+      
+      for (const child of children) {
+        const assessment = await getAssessment(child.profiles.id);
+        assessmentStatus[child.profiles.id] = !!assessment && 
+          assessment.parent_responses.short.length > 0;
+      }
+      
+      setChildAssessments(assessmentStatus);
+    };
+
+    loadAssessmentStatus();
+  }, [family, familyMembers, profile, getAssessment]);
+
+  const handleParentChildComplete = () => {
+    setSelectedChild(null);
+    // Refresh assessment status
+    if (family) {
+      const children = familyMembers.filter(member => member.profiles.user_type === 'child');
+      children.forEach(async (child) => {
+        const assessment = await getAssessment(child.profiles.id);
+        setChildAssessments(prev => ({
+          ...prev,
+          [child.profiles.id]: !!assessment && assessment.parent_responses.short.length > 0
+        }));
+      });
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -130,6 +171,18 @@ const Dashboard = () => {
     hasCompletedConversation,
     refreshKey
   });
+
+  // Show parent-child conversation if selected
+  if (selectedChild && family) {
+    return (
+      <ParentChildConversation 
+        child={selectedChild}
+        familyId={family.id}
+        onComplete={handleParentChildComplete}
+        onBack={() => setSelectedChild(null)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -368,6 +421,64 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Parent-Child Assessments - Show only for parents */}
+        {isParent && family && familyMembers.some(member => member.profiles.user_type === 'child') && (
+          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm mt-8">
+            <CardHeader>
+              <CardTitle className="text-xl text-gray-800">
+                Parent-Child Assessments
+              </CardTitle>
+              <CardDescription>
+                Complete separate assessments for each child to get personalized insights
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {familyMembers
+                .filter(member => member.profiles.user_type === 'child')
+                .map((child) => {
+                  const isCompleted = childAssessments[child.profiles.id];
+                  return (
+                    <div key={child.profiles.id} className={`border rounded-lg p-4 ${isCompleted ? 'bg-green-50' : 'bg-blue-50'}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-semibold text-gray-800">
+                          Assessment for {child.profiles.full_name}
+                        </h3>
+                        <Badge variant="secondary" className={`${isCompleted ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                          {isCompleted ? 'Completed' : 'Ready to Start'}
+                        </Badge>
+                      </div>
+                      <p className="text-gray-600 text-sm mb-3">
+                        {isCompleted 
+                          ? "You've completed this assessment. Your responses are locked and cannot be changed."
+                          : "Share your perspective on your relationship with this child."
+                        }
+                      </p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">
+                          Age: {child.profiles.age || 'Not specified'}
+                        </span>
+                        {!isCompleted ? (
+                          <Button 
+                            size="sm" 
+                            className="bg-blue-600 hover:bg-blue-700"
+                            onClick={() => setSelectedChild(child.profiles)}
+                          >
+                            Start Assessment
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="outline" disabled>
+                            Assessment Complete
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Actions */}
         <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm mt-8">
