@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import type { ParentChildAssessment } from '@/types/profile';
@@ -118,7 +118,7 @@ export const useParentChildAssessment = () => {
     }
   };
 
-  const getAssessment = async (childId: string): Promise<ParentChildAssessment | null> => {
+  const getAssessment = useCallback(async (childId: string): Promise<ParentChildAssessment | null> => {
     if (!user) return null;
 
     try {
@@ -147,9 +147,9 @@ export const useParentChildAssessment = () => {
       console.error('Error fetching assessment:', error);
       return null;
     }
-  };
+  }, [user]);
 
-  const getAssessmentsForFamily = async (familyId: string): Promise<ParentChildAssessment[]> => {
+  const getAssessmentsForFamily = useCallback(async (familyId: string): Promise<ParentChildAssessment[]> => {
     if (!user) return [];
 
     try {
@@ -176,7 +176,7 @@ export const useParentChildAssessment = () => {
       console.error('Error fetching family assessments:', error);
       return [];
     }
-  };
+  }, [user]);
 
   return {
     loading,
