@@ -47,25 +47,16 @@ ${parentResponses.short.map((answer: string, index: number) => `${index + 1}. ${
 Parent long answers:
 ${parentResponses.long.map((answer: string, index: number) => `${index + 1}. ${answer}`).join('\n')}
 
-Expected Output Format:
+Expected Output Format (JSON):
 
-*Child Profile:*  
-A few sentences summarizing the child's emotional state, fears, and hopes.
-
-*Parent Profile:*  
-A few sentences summarizing the parent's emotional state, confusion, and intentions.
-
-*Tailored Question for Child:*  
-[Your question here]
-
-*Tailored Question for Parent:*  
-[Your question here]
-
-*Conclusion for Child:*  
-[Encouraging, emotionally intelligent message]
-
-*Conclusion for Parent:*  
-[Encouraging, emotionally intelligent message]`;
+{
+  "childProfile": "A few sentences summarizing the child's emotional state, fears, and hopes.",
+  "parentProfile": "A few sentences summarizing the parent's emotional state, confusion, and intentions.",
+  "childQuestion": "Your tailored question for the child here",
+  "parentQuestion": "Your tailored question for the parent here",
+  "childConclusion": "Encouraging, emotionally intelligent message for the child",
+  "parentConclusion": "Encouraging, emotionally intelligent message for the parent"
+}`;
 
     const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1', {
       method: 'POST',
@@ -84,24 +75,49 @@ A few sentences summarizing the parent's emotional state, confusion, and intenti
       }),
     });
 
+    if (!response.ok) {
+      throw new Error(`Hugging Face API error: ${response.statusText}`);
+    }
+
     const data = await response.json();
     
     // Handle Hugging Face response format
-    let analysis;
+    let generatedText = '';
     if (Array.isArray(data) && data[0]?.generated_text) {
-      analysis = data[0].generated_text;
+      generatedText = data[0].generated_text;
     } else if (data.generated_text) {
-      analysis = data.generated_text;
+      generatedText = data.generated_text;
     } else {
       throw new Error('Unexpected response format from Hugging Face');
     }
 
-    return new Response(JSON.stringify({ analysis }), {
+    // Try to parse as JSON, fallback to text if needed
+    try {
+      const jsonStart = generatedText.indexOf('{');
+      const jsonEnd = generatedText.lastIndexOf('}') + 1;
+      if (jsonStart !== -1 && jsonEnd > jsonStart) {
+        const jsonString = generatedText.slice(jsonStart, jsonEnd);
+        const parsedAnalysis = JSON.parse(jsonString);
+        
+        return new Response(JSON.stringify(parsedAnalysis), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (parseError) {
+      console.warn('Failed to parse JSON, returning raw text');
+    }
+    
+    // Fallback to text format
+    return new Response(JSON.stringify({ analysis: generatedText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
     console.error('Error in analyze-parent-child-relationship function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      fallback: "We're having trouble generating insights right now. Please try again later."
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

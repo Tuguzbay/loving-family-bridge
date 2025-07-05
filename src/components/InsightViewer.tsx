@@ -13,7 +13,7 @@ interface InsightViewerProps {
 }
 
 export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) => {
-  const { getAssessment } = useParentChildAssessment();
+  const { getAssessment, analysisStatus } = useParentChildAssessment();
   const [assessment, setAssessment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -47,7 +47,7 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
     );
   }
 
-  if (!assessment || (!assessment.ai_analysis && !assessment.ai_analysis?.analysis)) {
+  if (!assessment || !assessment.ai_analysis) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
         <div className="max-w-2xl mx-auto">
@@ -72,11 +72,14 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
     );
   }
 
-  // Parse the AI analysis to extract sections for parent and child
-  const analysisText = typeof assessment.ai_analysis === 'string' 
-    ? assessment.ai_analysis 
-    : assessment.ai_analysis?.analysis || assessment.ai_analysis;
-  const sections = parseAnalysis(analysisText);
+  // Use structured data if available, otherwise parse text
+  const sections = assessment.ai_analysis.childProfile 
+    ? assessment.ai_analysis
+    : parseAnalysis(
+        typeof assessment.ai_analysis === 'string' 
+          ? assessment.ai_analysis 
+          : JSON.stringify(assessment.ai_analysis)
+      );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
@@ -173,12 +176,26 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
           </CardHeader>
           <CardContent>
             <div className="prose prose-sm max-w-none text-gray-600">
-              {analysisText.split('\n').map((line: string, index: number) => (
+              {(typeof assessment.ai_analysis === 'string' 
+                ? assessment.ai_analysis 
+                : JSON.stringify(assessment.ai_analysis, null, 2)
+              ).split('\n').map((line: string, index: number) => (
                 <p key={index} className="mb-2">{line}</p>
               ))}
             </div>
           </CardContent>
         </Card>
+
+        {/* Analysis Status Loading Indicator */}
+        {analysisStatus === 'loading' && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-xl">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-center">Generating personalized insights...</p>
+              <p className="text-sm text-gray-600 mt-2 text-center">This may take 20-30 seconds</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -186,67 +203,33 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
 
 // Helper function to parse the AI analysis into sections
 function parseAnalysis(text: string) {
-  const sections: {
-    childProfile?: string;
-    parentProfile?: string;
-    childQuestion?: string;
-    parentQuestion?: string;
-    childConclusion?: string;
-    parentConclusion?: string;
-  } = {};
-
-  // Split by common markers and extract sections
-  const lines = text.split('\n');
-  let currentSection = '';
-  let currentContent = '';
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    
-    if (trimmed.toLowerCase().includes('child profile')) {
-      if (currentSection && currentContent) {
-        sections[currentSection as keyof typeof sections] = currentContent.trim();
-      }
-      currentSection = 'childProfile';
-      currentContent = '';
-    } else if (trimmed.toLowerCase().includes('parent profile')) {
-      if (currentSection && currentContent) {
-        sections[currentSection as keyof typeof sections] = currentContent.trim();
-      }
-      currentSection = 'parentProfile';
-      currentContent = '';
-    } else if (trimmed.toLowerCase().includes('question for child')) {
-      if (currentSection && currentContent) {
-        sections[currentSection as keyof typeof sections] = currentContent.trim();
-      }
-      currentSection = 'childQuestion';
-      currentContent = '';
-    } else if (trimmed.toLowerCase().includes('question for parent')) {
-      if (currentSection && currentContent) {
-        sections[currentSection as keyof typeof sections] = currentContent.trim();
-      }
-      currentSection = 'parentQuestion';
-      currentContent = '';
-    } else if (trimmed.toLowerCase().includes('conclusion for child')) {
-      if (currentSection && currentContent) {
-        sections[currentSection as keyof typeof sections] = currentContent.trim();
-      }
-      currentSection = 'childConclusion';
-      currentContent = '';
-    } else if (trimmed.toLowerCase().includes('conclusion for parent')) {
-      if (currentSection && currentContent) {
-        sections[currentSection as keyof typeof sections] = currentContent.trim();
-      }
-      currentSection = 'parentConclusion';
-      currentContent = '';
-    } else if (trimmed && !trimmed.startsWith('*') && currentSection) {
-      currentContent += (currentContent ? '\n' : '') + trimmed;
+  // Try to parse as JSON first
+  try {
+    const jsonData = JSON.parse(text);
+    if (jsonData.childProfile && jsonData.parentProfile) {
+      return jsonData;
     }
+  } catch (e) {
+    // Not JSON, continue with text parsing
   }
 
-  // Don't forget the last section
-  if (currentSection && currentContent) {
-    sections[currentSection as keyof typeof sections] = currentContent.trim();
+  // Fallback to regex-based text parsing
+  const sections: Record<string, string> = {};
+
+  const sectionPatterns = [
+    { key: 'childProfile', pattern: /child profile:(.*?)(?=parent profile:|$)/is },
+    { key: 'parentProfile', pattern: /parent profile:(.*?)(?=question for child:|$)/is },
+    { key: 'childQuestion', pattern: /question for child:(.*?)(?=question for parent:|$)/is },
+    { key: 'parentQuestion', pattern: /question for parent:(.*?)(?=conclusion for child:|$)/is },
+    { key: 'childConclusion', pattern: /conclusion for child:(.*?)(?=conclusion for parent:|$)/is },
+    { key: 'parentConclusion', pattern: /conclusion for parent:(.*)/is }
+  ];
+
+  for (const { key, pattern } of sectionPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      sections[key] = match[1].trim().replace(/\*+/g, '').replace(/^- /gm, '');
+    }
   }
 
   return sections;

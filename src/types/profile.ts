@@ -44,7 +44,7 @@ export interface ParentChildAssessment {
     short: string[];
     long: string[];
   };
-  ai_analysis?: string;
+  ai_analysis?: any; // Changed from string to any to handle structured JSON
   created_at: string;
   updated_at: string;
 }

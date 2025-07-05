@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useToast } from '@/hooks/use-toast';
 import type { ParentChildAssessment } from '@/types/profile';
 
 interface AssessmentResponses {
@@ -23,7 +24,11 @@ const isAssessmentResponses = (value: any): value is AssessmentResponses => {
 
 export const useParentChildAssessment = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState<
+    'idle' | 'loading' | 'success' | 'error'
+  >('idle');
 
   const saveParentResponses = async (
     familyId: string,
@@ -94,6 +99,7 @@ export const useParentChildAssessment = () => {
     parentResponses: AssessmentResponses,
     childResponses: AssessmentResponses
   ) => {
+    setAnalysisStatus('loading');
     try {
       const { data: analysisResult, error: analysisError } = await supabase.functions.invoke(
         'analyze-parent-child-relationship',
@@ -104,17 +110,25 @@ export const useParentChildAssessment = () => {
 
       if (analysisError) throw analysisError;
 
-      // Save the AI analysis back to the database
+      // Store AI analysis as a JSON object with structured data
       await supabase
         .from('parent_child_assessments')
         .update({
-          ai_analysis: { analysis: analysisResult.analysis } as any,
+          ai_analysis: analysisResult, // Store the entire response
           updated_at: new Date().toISOString()
         })
         .eq('id', assessmentId);
 
+      setAnalysisStatus('success');
     } catch (error) {
       console.error('Error with AI analysis:', error);
+      setAnalysisStatus('error');
+      // Add error notification for the user
+      toast({
+        title: "AI Analysis Failed",
+        description: "We couldn't generate insights. Please try again later.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -132,7 +146,7 @@ export const useParentChildAssessment = () => {
       if (error) throw error;
       if (!data) return null;
 
-      // Convert the database response to our expected type
+      // Return structured AI analysis
       return {
         ...data,
         parent_responses: isAssessmentResponses(data.parent_responses) 
@@ -141,7 +155,7 @@ export const useParentChildAssessment = () => {
         child_responses: isAssessmentResponses(data.child_responses) 
           ? data.child_responses 
           : { short: [], long: [] },
-        ai_analysis: data.ai_analysis ? (data.ai_analysis as any).analysis : undefined
+        ai_analysis: data.ai_analysis || null // Keep as object
       };
     } catch (error) {
       console.error('Error fetching assessment:', error);
@@ -170,7 +184,7 @@ export const useParentChildAssessment = () => {
         child_responses: isAssessmentResponses(item.child_responses) 
           ? item.child_responses 
           : { short: [], long: [] },
-        ai_analysis: item.ai_analysis ? (item.ai_analysis as any).analysis : undefined
+        ai_analysis: item.ai_analysis || null // Keep as object
       }));
     } catch (error) {
       console.error('Error fetching family assessments:', error);
@@ -180,6 +194,7 @@ export const useParentChildAssessment = () => {
 
   return {
     loading,
+    analysisStatus,
     saveParentResponses,
     getAssessment,
     getAssessmentsForFamily
