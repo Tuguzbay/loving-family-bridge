@@ -71,6 +71,8 @@ const Dashboard = () => {
   };
 
   const handleJoinFamily = async (familyCode: string) => {
+    console.log('Dashboard: Starting join family process...');
+    
     const result = await joinFamily(familyCode);
     
     if (result.error) {
@@ -80,12 +82,17 @@ const Dashboard = () => {
         variant: "destructive"
       });
     } else {
+      console.log('Dashboard: Family joined successfully, showing success toast');
       toast({
         title: "Successfully Joined Family! 🎉",
         description: "Welcome to your family! You can now start the conversation.",
       });
-      // Force refresh the family data to update the UI immediately
-      await refreshFamilyData();
+      
+      // Additional refresh to ensure UI updates immediately
+      console.log('Dashboard: Triggering additional refresh...');
+      setTimeout(() => {
+        refreshFamilyData();
+      }, 500);
     }
     
     return result;

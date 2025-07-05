@@ -26,7 +26,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const { createFamily: createFamilyAction, joinFamily: joinFamilyAction } = useFamilyActions();
 
   const refreshFamilyData = async () => {
-    console.log('Manually refreshing family data...');
+    console.log('FamilyContext: Manually refreshing family data...');
     await fetchFamilyData(setFamily, setFamilyMembers, setConversationCompletion, setLoading);
   };
 
@@ -34,6 +34,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
     const result = await createFamilyAction();
     
     if (result.data) {
+      console.log('FamilyContext: Family created, refreshing data...');
       // Immediately refresh data
       await refreshFamilyData();
     }
@@ -42,11 +43,19 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const joinFamily = async (familyCode: string) => {
+    console.log('FamilyContext: Joining family with code:', familyCode);
     const result = await joinFamilyAction(familyCode);
     
     if (result.data) {
+      console.log('FamilyContext: Successfully joined family, refreshing data...');
       // Immediately refresh data
       await refreshFamilyData();
+      
+      // Force another refresh after a short delay to ensure UI updates
+      setTimeout(async () => {
+        console.log('FamilyContext: Secondary refresh after join...');
+        await refreshFamilyData();
+      }, 100);
     }
     
     return result;
@@ -59,6 +68,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
+    console.log('FamilyContext: User changed, fetching family data...');
     fetchFamilyData(setFamily, setFamilyMembers, setConversationCompletion, setLoading);
   }, [user]);
 
