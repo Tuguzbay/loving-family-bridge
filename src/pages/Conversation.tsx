@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { useFamily } from "@/contexts/FamilyContext";
+import { useProfileData } from "@/hooks/useProfileData";
 import { ConversationQuestions } from "@/components/ConversationQuestions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,11 +13,19 @@ import { supabase } from "@/integrations/supabase/client";
 
 const Conversation = () => {
   const { user } = useAuth();
-  const { profile, family, conversationCompletion, loading } = useProfile();
+  const { family, conversationCompletion, loading } = useFamily();
+  const { profile } = useProfileData();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [conversationStarted, setConversationStarted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch profile data when user is available
+  useEffect(() => {
+    if (user && !profile) {
+      // Profile will be fetched by useProfileData hook
+    }
+  }, [user, profile]);
 
   useEffect(() => {
     if (!user && !loading) {
