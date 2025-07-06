@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, LogOut, Star } from "lucide-react";
+import { Users, LogOut, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useSimpleProfile } from "@/hooks/useSimpleProfile";
@@ -214,7 +214,7 @@ const Dashboard = () => {
       {/* Navigation */}
       <nav className="flex justify-between items-center p-6 bg-white/80 backdrop-blur-sm border-b border-blue-100">
         <div className="flex items-center space-x-2">
-          <Heart className="h-8 w-8 text-blue-600" />
+          <Users className="h-8 w-8 text-blue-600" />
           <span className="text-2xl font-bold text-gray-800">FamilyConnect</span>
           {isChild && (
             <Badge className="bg-purple-100 text-purple-800 ml-2">

@@ -40,7 +40,27 @@ export const useParentChildAssessment = () => {
     setLoading(true);
     
     try {
-      // First check if child has completed their responses
+      // First get child's conversation responses
+      const { data: childConversationResponses } = await supabase
+        .from('conversation_responses')
+        .select('*')
+        .eq('user_id', childId)
+        .eq('family_id', familyId);
+
+      // Convert conversation responses to assessment format
+      let childResponses: AssessmentResponses = { short: [], long: [] };
+      if (childConversationResponses && childConversationResponses.length > 0) {
+        childResponses.short = childConversationResponses
+          .filter(r => r.question_type === 'short')
+          .sort((a, b) => a.question_id - b.question_id)
+          .map(r => r.response);
+        childResponses.long = childConversationResponses
+          .filter(r => r.question_type === 'long')
+          .sort((a, b) => a.question_id - b.question_id)
+          .map(r => r.response);
+      }
+
+      // Check if assessment already exists
       const { data: existingAssessment } = await supabase
         .from('parent_child_assessments')
         .select('*')
@@ -49,11 +69,12 @@ export const useParentChildAssessment = () => {
         .maybeSingle();
 
       if (existingAssessment) {
-        // Update existing assessment with parent responses
+        // Update existing assessment with parent responses and child responses
         const { data, error } = await supabase
           .from('parent_child_assessments')
           .update({
             parent_responses: responses as any,
+            child_responses: childResponses as any,
             updated_at: new Date().toISOString()
           })
           .eq('id', existingAssessment.id)
@@ -62,15 +83,14 @@ export const useParentChildAssessment = () => {
 
         if (error) throw error;
 
-        // If both parent and child have responses, trigger AI analysis
-        const childResponses = existingAssessment.child_responses;
-        if (childResponses && isAssessmentResponses(childResponses)) {
+        // Trigger AI analysis if both have responses
+        if (childResponses.short.length > 0 && childResponses.long.length > 0) {
           await triggerAIAnalysis(data.id, responses, childResponses);
         }
 
         return { data };
       } else {
-        // Create new assessment with parent responses
+        // Create new assessment with both responses
         const { data, error } = await supabase
           .from('parent_child_assessments')
           .insert({
@@ -78,12 +98,18 @@ export const useParentChildAssessment = () => {
             parent_id: user.id,
             child_id: childId,
             parent_responses: responses as any,
-            child_responses: { short: [], long: [] } as any // Empty child responses initially
+            child_responses: childResponses as any
           })
           .select()
           .single();
 
         if (error) throw error;
+
+        // Trigger AI analysis if both have responses
+        if (childResponses.short.length > 0 && childResponses.long.length > 0) {
+          await triggerAIAnalysis(data.id, responses, childResponses);
+        }
+
         return { data };
       }
     } catch (error) {
