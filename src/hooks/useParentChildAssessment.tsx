@@ -10,6 +10,16 @@ interface AssessmentResponses {
   long: string[];
 }
 
+interface AIAnalysis {
+  childProfile?: string;
+  parentProfile?: string;
+  childQuestion?: string;
+  parentQuestion?: string;
+  childConclusion?: string;
+  parentConclusion?: string;
+  error?: string;
+}
+
 // Type guard to check if a Json value is AssessmentResponses
 const isAssessmentResponses = (value: any): value is AssessmentResponses => {
   return (
@@ -127,38 +137,51 @@ export const useParentChildAssessment = () => {
   ) => {
     setAnalysisStatus('loading');
     try {
+      // Validate responses before sending
+      if (parentResponses.short.length === 0 || childResponses.short.length === 0) {
+        throw new Error('Incomplete responses for analysis');
+      }
+
       console.log('Triggering AI analysis with:', {
         assessmentId,
         parentResponsesCount: parentResponses.short.length + parentResponses.long.length,
         childResponsesCount: childResponses.short.length + childResponses.long.length
       });
 
-      const { data: analysisResult, error: analysisError } = await supabase.functions.invoke(
+      const { data: analysisResult, error } = await supabase.functions.invoke(
         'analyze-parent-child-relationship',
         {
-          body: { parentResponses, childResponses }
+          body: { 
+            parentResponses,
+            childResponses 
+          }
         }
       );
 
       console.log('Supabase function raw result:', analysisResult);
-      console.log('Supabase function error:', analysisError);
+      console.log('Supabase function error:', error);
 
-      if (analysisError) {
-        console.error('Supabase function error:', analysisError);
-        throw analysisError;
-      }
+      if (error) throw error;
+      if (!analysisResult) throw new Error('No analysis result returned');
 
-      if (!analysisResult) {
-        throw new Error('No analysis result received from function');
-      }
+      // Validate and store the analysis
+      const validatedAnalysis: AIAnalysis = analysisResult.error
+        ? { error: analysisResult.error }
+        : {
+            childProfile: analysisResult.childProfile || undefined,
+            parentProfile: analysisResult.parentProfile || undefined,
+            childQuestion: analysisResult.childQuestion || undefined,
+            parentQuestion: analysisResult.parentQuestion || undefined,
+            childConclusion: analysisResult.childConclusion || undefined,
+            parentConclusion: analysisResult.parentConclusion || undefined
+          };
 
-      console.log('Storing AI analysis in database...');
-      
-      // Store AI analysis as a JSON object with structured data
+      console.log('Storing validated analysis:', validatedAnalysis);
+
       const { data: updateData, error: updateError } = await supabase
         .from('parent_child_assessments')
         .update({
-          ai_analysis: analysisResult, // Store the entire response
+          ai_analysis: validatedAnalysis as any,
           updated_at: new Date().toISOString()
         })
         .eq('id', assessmentId)
@@ -171,15 +194,16 @@ export const useParentChildAssessment = () => {
 
       console.log('AI analysis stored successfully:', updateData);
       setAnalysisStatus('success');
+      return validatedAnalysis;
     } catch (error) {
       console.error('Error with AI analysis:', error);
       setAnalysisStatus('error');
-      // Add error notification for the user
       toast({
-        title: "AI Analysis Failed",
-        description: "We couldn't generate insights. Please try again later.",
+        title: "Analysis Failed",
+        description: error.message || "Couldn't generate insights",
         variant: "destructive"
       });
+      return { error: error.message };
     }
   };
 

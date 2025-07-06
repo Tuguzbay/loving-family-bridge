@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ArrowLeft, Heart, User, Users } from 'lucide-react';
 import { useParentChildAssessment } from '@/hooks/useParentChildAssessment';
-import type { Profile } from '@/types/profile';
+import type { Profile, ParentChildAssessment } from '@/types/profile';
 
 interface InsightViewerProps {
   child: Profile;
@@ -12,127 +13,191 @@ interface InsightViewerProps {
   onBack: () => void;
 }
 
+// Helper components
+const LoadingScreen = () => (
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+      <p className="mt-4 text-gray-600">Loading insights...</p>
+    </div>
+  </div>
+);
+
+const ErrorScreen = ({ error, onBack, childName }: { error: string, onBack: () => void, childName: string }) => (
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
+    <div className="max-w-2xl mx-auto">
+      <Button onClick={onBack} variant="ghost" className="mb-4">
+        <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
+      </Button>
+      <Alert variant="destructive">
+        <AlertTitle>Error Loading Insights</AlertTitle>
+        <AlertDescription>
+          Failed to load insights for {childName}: {error}
+        </AlertDescription>
+      </Alert>
+    </div>
+  </div>
+);
+
+const IncompleteAssessmentScreen = ({ onBack, childName }: { onBack: () => void, childName: string }) => (
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
+    <div className="max-w-2xl mx-auto">
+      <Button onClick={onBack} variant="ghost" className="mb-4">
+        <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
+      </Button>
+      <Card className="shadow-lg bg-white/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Heart className="h-5 w-5 mr-2 text-blue-600" />
+            Assessment Incomplete
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600">
+            Both you and {childName} need to complete your assessments before insights become available.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  </div>
+);
+
+const ProfileSection = ({ 
+  title, 
+  icon, 
+  variant, 
+  profile, 
+  question, 
+  conclusion 
+}: {
+  title: string;
+  icon: React.ReactNode;
+  variant: string;
+  profile?: string;
+  question?: string;
+  conclusion?: string;
+}) => (
+  <Card className="shadow-lg bg-white/80 backdrop-blur-sm">
+    <CardHeader>
+      <CardTitle className="flex items-center text-lg text-gray-800">
+        {icon}
+        {title}
+        <Badge variant="outline" className={`ml-2 ${variant}`}>{title.includes('Parent') ? 'Parent' : 'Child'}</Badge>
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      {profile && (
+        <div>
+          <h3 className="font-semibold text-gray-800 mb-2">Profile</h3>
+          <p className="text-gray-600 text-sm">{profile}</p>
+        </div>
+      )}
+      
+      {question && (
+        <div>
+          <h3 className="font-semibold text-gray-800 mb-2">Reflection Question</h3>
+          <p className="text-gray-600 text-sm italic">{question}</p>
+        </div>
+      )}
+      
+      {conclusion && (
+        <div>
+          <h3 className="font-semibold text-gray-800 mb-2">Path Forward</h3>
+          <p className="text-gray-600 text-sm">{conclusion}</p>
+        </div>
+      )}
+    </CardContent>
+  </Card>
+);
+
 export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) => {
   const { getAssessment, analysisStatus } = useParentChildAssessment();
-  const [assessment, setAssessment] = useState<any>(null);
+  const [assessment, setAssessment] = useState<ParentChildAssessment | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+    
     const loadAssessment = async () => {
-      setLoading(true);
       try {
         const data = await getAssessment(child.id);
+        if (!mounted) return;
+        
+        if (!data) {
+          setError('No assessment found');
+          return;
+        }
+        
         console.log('Assessment data loaded for insights:', data);
         console.log('AI analysis exists:', !!data?.ai_analysis);
         console.log('AI analysis content:', data?.ai_analysis);
+        
         setAssessment(data);
-      } catch (error) {
-        console.error('Error loading assessment:', error);
+        
+        if (data.ai_analysis?.error) {
+          setError(data.ai_analysis.error);
+        }
+      } catch (err) {
+        if (!mounted) return;
+        console.error('Error loading assessment:', err);
+        setError(err.message);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     loadAssessment();
+    return () => { mounted = false; };
   }, [child.id, getAssessment]);
 
   if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading insights...</p>
-        </div>
-      </div>
+      <ErrorScreen 
+        error={error}
+        onBack={onBack}
+        childName={child.full_name}
+      />
     );
   }
 
-  if (!assessment || !assessment.ai_analysis) {
-    console.log('No assessment or AI analysis found:', {
-      hasAssessment: !!assessment,
-      hasAiAnalysis: !!assessment?.ai_analysis,
-      aiAnalysisType: typeof assessment?.ai_analysis,
-      aiAnalysisContent: assessment?.ai_analysis
-    });
-    
+  if (!assessment?.ai_analysis) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
-        <div className="max-w-2xl mx-auto">
-          <Button variant="ghost" onClick={onBack} className="mb-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          
-          <Card className="shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardContent className="text-center p-8">
-              <Heart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                Insights Not Available Yet
-              </h2>
-              <p className="text-gray-600">
-                Both you and {child.full_name} need to complete your assessments before insights become available.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <IncompleteAssessmentScreen 
+        onBack={onBack}
+        childName={child.full_name}
+      />
     );
   }
 
-  // Safe parsing with multiple fallbacks
-  let sections: Record<string, string> = {};
-  try {
-    console.log('Parsing AI analysis:', assessment.ai_analysis);
-    
-    const raw = typeof assessment.ai_analysis === 'string'
-      ? JSON.parse(assessment.ai_analysis)
-      : assessment.ai_analysis;
+  const { ai_analysis } = assessment;
 
-    if (raw && raw.childProfile && raw.parentProfile) {
-      sections = raw;
-      console.log('Using structured data:', sections);
-    } else {
-      console.log('Structured data not found, trying fallback parsing');
-      sections = parseAnalysis(JSON.stringify(raw));
-    }
-  } catch (e) {
-    console.warn('Parsing AI analysis failed, fallback to regex parser:', e);
-    sections = parseAnalysis(String(assessment.ai_analysis));
+  // Handle case where AI analysis has an error
+  if (ai_analysis.error) {
+    return (
+      <ErrorScreen 
+        error={ai_analysis.error}
+        onBack={onBack}
+        childName={child.full_name}
+      />
+    );
   }
 
-  // Validate that we have at least some content
-  const hasValidSections = sections && (
-    sections.childProfile || 
-    sections.parentProfile || 
-    sections.childQuestion || 
-    sections.parentQuestion ||
-    sections.childConclusion ||
-    sections.parentConclusion
-  );
+  // Validate that we have meaningful content
+  const hasValidContent = ai_analysis.childProfile || ai_analysis.parentProfile || 
+                         ai_analysis.childQuestion || ai_analysis.parentQuestion ||
+                         ai_analysis.childConclusion || ai_analysis.parentConclusion;
 
-  if (!hasValidSections) {
-    console.log('No valid sections found after parsing');
+  if (!hasValidContent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
-        <div className="max-w-2xl mx-auto">
-          <Button variant="ghost" onClick={onBack} className="mb-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          
-          <Card className="shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardContent className="text-center p-8">
-              <Heart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                Processing Insights...
-              </h2>
-              <p className="text-gray-600">
-                We're still processing your insights. Please check back in a few minutes.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <IncompleteAssessmentScreen 
+        onBack={onBack}
+        childName={child.full_name}
+      />
     );
   }
 
@@ -158,88 +223,39 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
 
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Parent Insights */}
-          <Card className="shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg text-gray-800">
-                <User className="h-5 w-5 mr-2 text-blue-600" />
-                For You (Parent)
-                <Badge variant="outline" className="ml-2">Parent</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {sections.parentProfile && (
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Your Profile</h3>
-                  <p className="text-gray-600 text-sm">{sections.parentProfile}</p>
-                </div>
-              )}
-              
-              {sections.parentQuestion && (
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Reflection Question</h3>
-                  <p className="text-gray-600 text-sm italic">{sections.parentQuestion}</p>
-                </div>
-              )}
-              
-              {sections.parentConclusion && (
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Your Path Forward</h3>
-                  <p className="text-gray-600 text-sm">{sections.parentConclusion}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ProfileSection 
+            title="For You (Parent)"
+            icon={<User className="h-5 w-5 mr-2 text-blue-600" />}
+            variant=""
+            profile={ai_analysis.parentProfile}
+            question={ai_analysis.parentQuestion}
+            conclusion={ai_analysis.parentConclusion}
+          />
 
           {/* Child Insights */}
-          <Card className="shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg text-gray-800">
-                <Users className="h-5 w-5 mr-2 text-purple-600" />
-                For {child.full_name}
-                <Badge variant="outline" className="ml-2 bg-purple-100 text-purple-800">Child</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {sections.childProfile && (
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Their Profile</h3>
-                  <p className="text-gray-600 text-sm">{sections.childProfile}</p>
-                </div>
-              )}
-              
-              {sections.childQuestion && (
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Their Reflection Question</h3>
-                  <p className="text-gray-600 text-sm italic">{sections.childQuestion}</p>
-                </div>
-              )}
-              
-              {sections.childConclusion && (
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Their Path Forward</h3>
-                  <p className="text-gray-600 text-sm">{sections.childConclusion}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ProfileSection 
+            title={`For ${child.full_name}`}
+            icon={<Users className="h-5 w-5 mr-2 text-purple-600" />}
+            variant="bg-purple-100 text-purple-800"
+            profile={ai_analysis.childProfile}
+            question={ai_analysis.childQuestion}
+            conclusion={ai_analysis.childConclusion}
+          />
         </div>
 
-        {/* Full Analysis (Optional) */}
-        <Card className="shadow-lg bg-white/80 backdrop-blur-sm mt-6">
-          <CardHeader>
-            <CardTitle className="text-lg text-gray-800">Complete Analysis</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="prose prose-sm max-w-none text-gray-600">
-              {(typeof assessment.ai_analysis === 'string' 
-                ? assessment.ai_analysis 
-                : JSON.stringify(assessment.ai_analysis, null, 2)
-              ).split('\n').map((line: string, index: number) => (
-                <p key={index} className="mb-2">{line}</p>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Debug Information (only show if needed) */}
+        {process.env.NODE_ENV === 'development' && (
+          <Card className="shadow-lg bg-white/80 backdrop-blur-sm mt-6">
+            <CardHeader>
+              <CardTitle className="text-lg text-gray-800">Debug: Raw Analysis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <pre className="text-xs text-gray-600 whitespace-pre-wrap">
+                {JSON.stringify(ai_analysis, null, 2)}
+              </pre>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Analysis Status Loading Indicator */}
         {analysisStatus === 'loading' && (
@@ -255,37 +271,3 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
     </div>
   );
 };
-
-// Helper function to parse the AI analysis into sections
-function parseAnalysis(text: string) {
-  // Try to parse as JSON first
-  try {
-    const jsonData = JSON.parse(text);
-    if (jsonData.childProfile && jsonData.parentProfile) {
-      return jsonData;
-    }
-  } catch (e) {
-    // Not JSON, continue with text parsing
-  }
-
-  // Fallback to regex-based text parsing
-  const sections: Record<string, string> = {};
-
-  const sectionPatterns = [
-    { key: 'childProfile', pattern: /child profile:(.*?)(?=parent profile:|$)/is },
-    { key: 'parentProfile', pattern: /parent profile:(.*?)(?=question for child:|$)/is },
-    { key: 'childQuestion', pattern: /question for child:(.*?)(?=question for parent:|$)/is },
-    { key: 'parentQuestion', pattern: /question for parent:(.*?)(?=conclusion for child:|$)/is },
-    { key: 'childConclusion', pattern: /conclusion for child:(.*?)(?=conclusion for parent:|$)/is },
-    { key: 'parentConclusion', pattern: /conclusion for parent:(.*)/is }
-  ];
-
-  for (const { key, pattern } of sectionPatterns) {
-    const match = text.match(pattern);
-    if (match && match[1]) {
-      sections[key] = match[1].trim().replace(/\*+/g, '').replace(/^- /gm, '');
-    }
-  }
-
-  return sections;
-}
