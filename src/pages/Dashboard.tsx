@@ -33,7 +33,8 @@ const Dashboard = () => {
   } = useFamily();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { getAssessment } = useParentChildAssessment();
+  const assessmentHook = useParentChildAssessment();
+  const { getAssessment, refreshAndLinkChildResponses } = assessmentHook;
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedChild, setSelectedChild] = useState<Profile | null>(null);
   const [selectedInsightChild, setSelectedInsightChild] = useState<Profile | null>(null);
@@ -67,6 +68,13 @@ const Dashboard = () => {
         assessmentStatus[child.profiles.id] = hasParentResponses;
         console.log(`Parent assessment for ${child.profiles.full_name}:`, hasParentResponses, assessment);
         
+        // Check if child responses are missing but child has completed conversation
+        if (assessment && hasParentResponses && 
+            (!assessment.child_responses.short || assessment.child_responses.short.length === 0)) {
+          console.log(`Child responses missing for ${child.profiles.full_name}, attempting to link...`);
+          await refreshAndLinkChildResponses(child.profiles.id, family.id);
+        }
+        
         // Check child's conversation completion
         const { data: childCompletion } = await supabase
           .from('conversation_completions')
@@ -88,7 +96,7 @@ const Dashboard = () => {
     };
 
     loadCompletionData();
-  }, [family, familyMembers, profile, getAssessment]);
+  }, [family, familyMembers, profile, getAssessment, refreshAndLinkChildResponses]);
 
   const handleParentChildComplete = () => {
     setSelectedChild(null);

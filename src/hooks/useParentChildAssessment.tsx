@@ -208,13 +208,10 @@ export const useParentChildAssessment = () => {
   };
 
   const getAssessment = useCallback(async (childId: string): Promise<ParentChildAssessment | null> => {
-    if (!user) return null;
-
     try {
       const { data, error } = await supabase
         .from('parent_child_assessments')
         .select('*')
-        .eq('parent_id', user.id)
         .eq('child_id', childId)
         .maybeSingle();
 
@@ -236,7 +233,7 @@ export const useParentChildAssessment = () => {
       console.error('Error fetching assessment:', error);
       return null;
     }
-  }, [user]);
+  }, []);
 
   const getAssessmentsForFamily = useCallback(async (familyId: string): Promise<ParentChildAssessment[]> => {
     if (!user) return [];
@@ -267,11 +264,99 @@ export const useParentChildAssessment = () => {
     }
   }, [user]);
 
+  const refreshAndLinkChildResponses = async (childId: string, familyId: string) => {
+    if (!user) return { error: 'No user found' };
+    
+    try {
+      console.log('Linking child responses for:', childId);
+      
+      // Get child's conversation responses
+      const { data: childConversationResponses, error: responseError } = await supabase
+        .from('conversation_responses')
+        .select('*')
+        .eq('user_id', childId)
+        .eq('family_id', familyId);
+
+      console.log('Child conversation responses found:', childConversationResponses?.length || 0);
+
+      if (responseError) {
+        console.error('Error fetching child responses:', responseError);
+        return { error: responseError.message };
+      }
+
+      // Convert conversation responses to assessment format
+      let childResponses: AssessmentResponses = { short: [], long: [] };
+      if (childConversationResponses && childConversationResponses.length > 0) {
+        childResponses.short = childConversationResponses
+          .filter(r => r.question_type === 'short')
+          .sort((a, b) => a.question_id - b.question_id)
+          .map(r => r.response);
+        childResponses.long = childConversationResponses
+          .filter(r => r.question_type === 'long')
+          .sort((a, b) => a.question_id - b.question_id)
+          .map(r => r.response);
+      }
+
+      console.log('Processed child responses:', childResponses);
+
+      // Check if assessment exists and get it
+      const { data: existingAssessment, error: assessmentError } = await supabase
+        .from('parent_child_assessments')
+        .select('*')
+        .eq('child_id', childId)
+        .eq('family_id', familyId)
+        .maybeSingle();
+
+      if (assessmentError) {
+        console.error('Error fetching assessment:', assessmentError);
+        return { error: assessmentError.message };
+      }
+
+      if (!existingAssessment) {
+        return { error: 'No parent assessment found for this child' };
+      }
+
+      console.log('Existing assessment found:', existingAssessment.id);
+
+      // Update the assessment with child responses
+      const { data: updatedAssessment, error: updateError } = await supabase
+        .from('parent_child_assessments')
+        .update({
+          child_responses: childResponses as any,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingAssessment.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating assessment:', updateError);
+        return { error: updateError.message };
+      }
+
+      console.log('Assessment updated with child responses');
+
+      // Now trigger AI analysis if both have responses
+      const parentResponses = existingAssessment.parent_responses;
+      if (childResponses.short.length > 0 && childResponses.long.length > 0 && 
+          parentResponses && isAssessmentResponses(parentResponses)) {
+        console.log('Triggering AI analysis...');
+        await triggerAIAnalysis(existingAssessment.id, parentResponses, childResponses);
+      }
+
+      return { data: updatedAssessment };
+    } catch (error) {
+      console.error('Error in refreshAndLinkChildResponses:', error);
+      return { error: error.message };
+    }
+  };
+
   return {
     loading,
     analysisStatus,
     saveParentResponses,
     getAssessment,
-    getAssessmentsForFamily
+    getAssessmentsForFamily,
+    refreshAndLinkChildResponses
   };
 };
