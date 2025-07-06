@@ -48,6 +48,13 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
   }
 
   if (!assessment || !assessment.ai_analysis) {
+    console.log('No assessment or AI analysis found:', {
+      hasAssessment: !!assessment,
+      hasAiAnalysis: !!assessment?.ai_analysis,
+      aiAnalysisType: typeof assessment?.ai_analysis,
+      aiAnalysisContent: assessment?.ai_analysis
+    });
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
         <div className="max-w-2xl mx-auto">
@@ -72,14 +79,62 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
     );
   }
 
-  // Use structured data if available, otherwise parse text
-  const sections = assessment.ai_analysis.childProfile 
-    ? assessment.ai_analysis
-    : parseAnalysis(
-        typeof assessment.ai_analysis === 'string' 
-          ? assessment.ai_analysis 
-          : JSON.stringify(assessment.ai_analysis)
-      );
+  // Safe parsing with multiple fallbacks
+  let sections: Record<string, string> = {};
+  try {
+    console.log('Parsing AI analysis:', assessment.ai_analysis);
+    
+    const raw = typeof assessment.ai_analysis === 'string'
+      ? JSON.parse(assessment.ai_analysis)
+      : assessment.ai_analysis;
+
+    if (raw && raw.childProfile && raw.parentProfile) {
+      sections = raw;
+      console.log('Using structured data:', sections);
+    } else {
+      console.log('Structured data not found, trying fallback parsing');
+      sections = parseAnalysis(JSON.stringify(raw));
+    }
+  } catch (e) {
+    console.warn('Parsing AI analysis failed, fallback to regex parser:', e);
+    sections = parseAnalysis(String(assessment.ai_analysis));
+  }
+
+  // Validate that we have at least some content
+  const hasValidSections = sections && (
+    sections.childProfile || 
+    sections.parentProfile || 
+    sections.childQuestion || 
+    sections.parentQuestion ||
+    sections.childConclusion ||
+    sections.parentConclusion
+  );
+
+  if (!hasValidSections) {
+    console.log('No valid sections found after parsing');
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
+        <div className="max-w-2xl mx-auto">
+          <Button variant="ghost" onClick={onBack} className="mb-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          
+          <Card className="shadow-lg bg-white/80 backdrop-blur-sm">
+            <CardContent className="text-center p-8">
+              <Heart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                Processing Insights...
+              </h2>
+              <p className="text-gray-600">
+                We're still processing your insights. Please check back in a few minutes.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">

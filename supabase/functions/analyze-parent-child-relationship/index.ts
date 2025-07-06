@@ -58,6 +58,8 @@ Expected Output Format (JSON):
   "parentConclusion": "Encouraging, emotionally intelligent message for the parent"
 }`;
 
+    console.log('Sending request to Hugging Face API...');
+    
     const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1', {
       method: 'POST',
       headers: {
@@ -76,10 +78,12 @@ Expected Output Format (JSON):
     });
 
     if (!response.ok) {
+      console.error(`Hugging Face API error: ${response.status} ${response.statusText}`);
       throw new Error(`Hugging Face API error: ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('Raw Hugging Face response:', data);
     
     // Handle Hugging Face response format
     let generatedText = '';
@@ -88,26 +92,34 @@ Expected Output Format (JSON):
     } else if (data.generated_text) {
       generatedText = data.generated_text;
     } else {
+      console.error('Unexpected response format from Hugging Face:', data);
       throw new Error('Unexpected response format from Hugging Face');
     }
 
-    // Try to parse as JSON, fallback to text if needed
+    console.log('Generated HuggingFace output:', generatedText);
+
+    // Try to parse as JSON using safer regex approach
     try {
-      const jsonStart = generatedText.indexOf('{');
-      const jsonEnd = generatedText.lastIndexOf('}') + 1;
-      if (jsonStart !== -1 && jsonEnd > jsonStart) {
-        const jsonString = generatedText.slice(jsonStart, jsonEnd);
-        const parsedAnalysis = JSON.parse(jsonString);
+      const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        console.log('Successfully parsed JSON:', parsed);
         
-        return new Response(JSON.stringify(parsedAnalysis), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        // Validate that we have the expected structure
+        if (parsed.childProfile && parsed.parentProfile) {
+          return new Response(JSON.stringify(parsed), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } else {
+          console.warn('JSON parsed but missing required fields:', parsed);
+        }
       }
     } catch (parseError) {
-      console.warn('Failed to parse JSON, returning raw text');
+      console.warn('Could not parse Hugging Face response as JSON:', parseError);
     }
     
     // Fallback to text format
+    console.log('Falling back to raw text format');
     return new Response(JSON.stringify({ analysis: generatedText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

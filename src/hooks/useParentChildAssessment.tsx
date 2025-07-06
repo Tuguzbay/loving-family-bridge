@@ -127,6 +127,12 @@ export const useParentChildAssessment = () => {
   ) => {
     setAnalysisStatus('loading');
     try {
+      console.log('Triggering AI analysis with:', {
+        assessmentId,
+        parentResponsesCount: parentResponses.short.length + parentResponses.long.length,
+        childResponsesCount: childResponses.short.length + childResponses.long.length
+      });
+
       const { data: analysisResult, error: analysisError } = await supabase.functions.invoke(
         'analyze-parent-child-relationship',
         {
@@ -134,17 +140,36 @@ export const useParentChildAssessment = () => {
         }
       );
 
-      if (analysisError) throw analysisError;
+      console.log('Supabase function raw result:', analysisResult);
+      console.log('Supabase function error:', analysisError);
 
+      if (analysisError) {
+        console.error('Supabase function error:', analysisError);
+        throw analysisError;
+      }
+
+      if (!analysisResult) {
+        throw new Error('No analysis result received from function');
+      }
+
+      console.log('Storing AI analysis in database...');
+      
       // Store AI analysis as a JSON object with structured data
-      await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('parent_child_assessments')
         .update({
           ai_analysis: analysisResult, // Store the entire response
           updated_at: new Date().toISOString()
         })
-        .eq('id', assessmentId);
+        .eq('id', assessmentId)
+        .select();
 
+      if (updateError) {
+        console.error('Database update error:', updateError);
+        throw updateError;
+      }
+
+      console.log('AI analysis stored successfully:', updateData);
       setAnalysisStatus('success');
     } catch (error) {
       console.error('Error with AI analysis:', error);
