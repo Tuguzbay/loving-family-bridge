@@ -60,14 +60,12 @@ const Dashboard = () => {
       console.log('Loading completion data for children:', children.map(c => c.profiles.full_name));
       
       for (const child of children) {
-        // Check parent-child assessment completion
-        if (profile.user_type === 'parent') {
-          const assessment = await getAssessment(child.profiles.id);
-          const hasParentResponses = !!assessment && 
-            assessment.parent_responses.short.length > 0;
-          assessmentStatus[child.profiles.id] = hasParentResponses;
-          console.log(`Parent assessment for ${child.profiles.full_name}:`, hasParentResponses, assessment);
-        }
+        // Check parent-child assessment completion (check for ANY parent, not just current user)
+        const assessment = await getAssessment(child.profiles.id);
+        const hasParentResponses = !!assessment && 
+          assessment.parent_responses.short.length > 0;
+        assessmentStatus[child.profiles.id] = hasParentResponses;
+        console.log(`Parent assessment for ${child.profiles.full_name}:`, hasParentResponses, assessment);
         
         // Check child's conversation completion
         const { data: childCompletion } = await supabase
@@ -303,6 +301,7 @@ const Dashboard = () => {
           childAssessments={childAssessments}
           childCompletions={childCompletions}
           onSelectInsightChild={setSelectedInsightChild}
+          currentUserId={user?.id}
         />
       </div>
     </div>

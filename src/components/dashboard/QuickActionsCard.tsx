@@ -13,6 +13,7 @@ interface QuickActionsCardProps {
   childAssessments: Record<string, boolean>;
   childCompletions: Record<string, boolean>;
   onSelectInsightChild: (child: Profile) => void;
+  currentUserId?: string; // Add current user ID
 }
 
 export const QuickActionsCard = ({ 
@@ -23,7 +24,8 @@ export const QuickActionsCard = ({
   familyMembers, 
   childAssessments,
   childCompletions,
-  onSelectInsightChild 
+  onSelectInsightChild,
+  currentUserId
 }: QuickActionsCardProps) => {
   return (
     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm mt-8">
@@ -83,10 +85,50 @@ export const QuickActionsCard = ({
                   );
                 })}
             </div>
+          ) : isChild && family && familyMembers.length > 0 ? (
+            // For children, show insights for themselves if available
+            (() => {
+              // Find current child user by matching their user ID
+              const currentUser = familyMembers.find(member => 
+                member.profiles.user_type === 'child' && 
+                member.profiles.id === currentUserId
+              );
+              if (currentUser) {
+                const parentCompleted = childAssessments[currentUser.profiles.id] || false;
+                const childCompleted = childCompletions[currentUser.profiles.id] || false;
+                const hasInsights = parentCompleted && childCompleted;
+                
+                console.log(`Child insight availability:`, {
+                  childId: currentUser.profiles.id,
+                  childName: currentUser.profiles.full_name,
+                  parentCompleted,
+                  childCompleted, 
+                  hasInsights
+                });
+                
+                return (
+                  <Button 
+                    variant="outline" 
+                    className="h-20 flex-col space-y-2 w-full" 
+                    disabled={!hasInsights}
+                    onClick={() => hasInsights && onSelectInsightChild(currentUser.profiles)}
+                  >
+                    <Heart className="h-6 w-6 text-red-500" />
+                    <span>My Family Insights</span>
+                  </Button>
+                );
+              }
+              return (
+                <Button variant="outline" className="h-20 flex-col space-y-2" disabled>
+                  <Heart className="h-6 w-6 text-red-500" />
+                  <span>Family Insights</span>
+                </Button>
+              );
+            })()
           ) : (
-            <Button variant="outline" className="h-20 flex-col space-y-2" disabled={!hasCompletedConversation}>
+            <Button variant="outline" className="h-20 flex-col space-y-2" disabled>
               <Heart className="h-6 w-6 text-red-500" />
-              <span>{isChild ? "Family Insights" : "View Insights"}</span>
+              <span>View Insights</span>
             </Button>
           )}
         </div>
