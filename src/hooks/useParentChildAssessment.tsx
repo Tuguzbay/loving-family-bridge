@@ -327,7 +327,7 @@ export const useParentChildAssessment = () => {
         })
         .eq('id', existingAssessment.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (updateError) {
         console.error('Error updating assessment:', updateError);
