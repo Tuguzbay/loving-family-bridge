@@ -75,6 +75,14 @@ const Dashboard = () => {
           await refreshAndLinkChildResponses(child.profiles.id, family.id);
         }
         
+        // If AI analysis is missing but we have both responses, trigger it
+        if (assessment && hasParentResponses && 
+            assessment.child_responses.short.length > 0 && 
+            !assessment.ai_analysis) {
+          console.log(`AI analysis missing for ${child.profiles.full_name}, triggering analysis...`);
+          await refreshAndLinkChildResponses(child.profiles.id, family.id);
+        }
+        
         // Check child's conversation completion
         const { data: childCompletion } = await supabase
           .from('conversation_completions')

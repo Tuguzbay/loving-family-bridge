@@ -340,7 +340,11 @@ export const useParentChildAssessment = () => {
       const parentResponses = existingAssessment.parent_responses;
       if (childResponses.short.length > 0 && childResponses.long.length > 0 && 
           parentResponses && isAssessmentResponses(parentResponses)) {
-        console.log('Triggering AI analysis...');
+        console.log('Triggering AI analysis with data:', {
+          assessmentId: existingAssessment.id,
+          childResponsesCount: childResponses.short.length + childResponses.long.length,
+          parentResponsesCount: parentResponses.short.length + parentResponses.long.length
+        });
         await triggerAIAnalysis(existingAssessment.id, parentResponses, childResponses);
       }
 

@@ -111,7 +111,7 @@ const ProfileSection = ({
 );
 
 export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) => {
-  const { getAssessment, analysisStatus } = useParentChildAssessment();
+  const { getAssessment, analysisStatus, refreshAndLinkChildResponses } = useParentChildAssessment();
   const [assessment, setAssessment] = useState<ParentChildAssessment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +133,22 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
         console.log('AI analysis exists:', !!data?.ai_analysis);
         console.log('AI analysis content:', data?.ai_analysis);
         
-        setAssessment(data);
+        // If AI analysis is missing but we have both responses, trigger it
+        if (!data.ai_analysis && 
+            data.parent_responses.short.length > 0 && 
+            data.child_responses.short.length > 0) {
+          console.log('AI analysis missing, triggering analysis for child:', child.full_name);
+          setLoading(true);
+          await refreshAndLinkChildResponses(child.id, familyId);
+          // Reload assessment after triggering analysis
+          const updatedData = await getAssessment(child.id);
+          if (mounted && updatedData) {
+            setAssessment(updatedData);
+            console.log('Updated assessment after triggering analysis:', updatedData);
+          }
+        } else {
+          setAssessment(data);
+        }
         
         if (data.ai_analysis?.error) {
           setError(data.ai_analysis.error);
@@ -149,7 +164,7 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
 
     loadAssessment();
     return () => { mounted = false; };
-  }, [child.id, getAssessment]);
+  }, [child.id, getAssessment, refreshAndLinkChildResponses, familyId]);
 
   if (loading) {
     return <LoadingScreen />;
