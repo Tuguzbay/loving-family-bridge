@@ -18,6 +18,12 @@ import { FamilyMembersCard } from "@/components/dashboard/FamilyMembersCard";
 import { ParentChildAssessmentsCard } from "@/components/dashboard/ParentChildAssessmentsCard";
 import { QuickActionsCard } from "@/components/dashboard/QuickActionsCard";
 import type { Profile } from "@/types/profile";
+import { motion, useReducedMotion } from "framer-motion";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.7 } }
+};
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -176,6 +182,8 @@ const Dashboard = () => {
     }
   };
 
+  const shouldReduceMotion = useReducedMotion();
+
   if (loading || !profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
@@ -225,11 +233,15 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      {/* Navigation */}
-      <nav className="flex justify-between items-center p-6 bg-white/80 backdrop-blur-sm border-b border-blue-100">
+      <motion.nav
+        initial={shouldReduceMotion ? undefined : "hidden"}
+        animate={shouldReduceMotion ? undefined : "visible"}
+        variants={fadeUp}
+        className="flex justify-between items-center p-6 bg-white/70 backdrop-blur-xl border-b border-blue-100 shadow-md z-10 relative"
+      >
         <div className="flex items-center space-x-2">
-          <Users className="h-8 w-8 text-blue-600" />
-          <span className="text-2xl font-bold text-gray-800">FamilyConnect</span>
+          <Users className="h-8 w-8 text-blue-600 drop-shadow-lg" />
+          <span className="text-2xl font-extrabold text-gray-900 tracking-tight">FamilyConnect</span>
           {isChild && (
             <Badge className="bg-purple-100 text-purple-800 ml-2">
               <Star className="h-3 w-3 mr-1" />
@@ -237,16 +249,18 @@ const Dashboard = () => {
             </Badge>
           )}
         </div>
-        <div className="flex items-center space-x-4">
-          <span className="text-gray-600">Welcome, {profile.full_name.split(' ')[0]}!</span>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
+        <div className="space-x-4">
+          <Button onClick={handleSignOut} className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white font-bold shadow-lg rounded-full px-6 py-2">
+            <LogOut className="h-5 w-5 mr-2" /> Sign Out
           </Button>
         </div>
-      </nav>
-
-      <div className="container mx-auto px-6 py-8">
+      </motion.nav>
+      <motion.div
+        initial={shouldReduceMotion ? undefined : "hidden"}
+        animate={shouldReduceMotion ? undefined : "visible"}
+        variants={fadeUp}
+        className="container mx-auto px-6 py-10"
+      >
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
@@ -319,7 +333,7 @@ const Dashboard = () => {
           onSelectInsightChild={setSelectedInsightChild}
           currentUserId={user?.id}
         />
-      </div>
+      </motion.div>
     </div>
   );
 };
