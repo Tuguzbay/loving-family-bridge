@@ -182,7 +182,7 @@ const Index = () => {
           <p className="text-2xl text-gray-700 mb-8">Join thousands of families who are already communicating better.</p>
           <Link to="/register">
             <Button size="lg" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white px-10 py-5 text-2xl font-bold shadow-xl rounded-full">
-              Start Your Free Journey
+              Start Your Journey
               <ArrowRight className="ml-2 h-6 w-6" />
             </Button>
           </Link>
