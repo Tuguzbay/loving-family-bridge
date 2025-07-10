@@ -115,6 +115,7 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
   const [assessment, setAssessment] = useState<ParentChildAssessment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [analysisAttempted, setAnalysisAttempted] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -133,18 +134,26 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
         console.log('AI analysis exists:', !!data?.ai_analysis);
         console.log('AI analysis content:', data?.ai_analysis);
         
-        // If AI analysis is missing but we have both responses, trigger it
+        // If AI analysis is missing but we have both responses, trigger it (only once)
         if (!data.ai_analysis && 
             data.parent_responses.short.length > 0 && 
-            data.child_responses.short.length > 0) {
+            data.child_responses.short.length > 0 &&
+            !analysisAttempted) {
           console.log('AI analysis missing, triggering analysis for child:', child.full_name);
-          setLoading(true);
-          await refreshAndLinkChildResponses(child.id, familyId);
-          // Reload assessment after triggering analysis
-          const updatedData = await getAssessment(child.id);
-          if (mounted && updatedData) {
-            setAssessment(updatedData);
-            console.log('Updated assessment after triggering analysis:', updatedData);
+          setAnalysisAttempted(true);
+          try {
+            await refreshAndLinkChildResponses(child.id, familyId);
+            // Wait a moment for the analysis to complete
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Reload assessment after triggering analysis
+            const updatedData = await getAssessment(child.id);
+            if (mounted && updatedData) {
+              setAssessment(updatedData);
+              console.log('Updated assessment after triggering analysis:', updatedData);
+            }
+          } catch (analysisError) {
+            console.error('Error triggering AI analysis:', analysisError);
+            setError('Failed to generate insights. Please try again later.');
           }
         } else {
           setAssessment(data);
