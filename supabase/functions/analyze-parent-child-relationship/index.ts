@@ -95,46 +95,29 @@ serve(async (req) => {
     const requestData = await req.json();
     const { parentResponses, childResponses } = validateInput(requestData);
 
-    const prompt = `You are an emotionally intelligent AI that helps parents and children understand each other more deeply.
+    // Build the prompt with proper Mistral instruction format
+    const prompt = `<s>[INST] You are an emotionally intelligent AI family relationship expert. Analyze the parent and child assessment responses below and provide insights to help them understand each other better.
 
-You are given:
-- 10 short (agree/disagree) responses and
-- 3 long open-ended responses
+Child Assessment Responses:
+Short answers: ${childResponses.short.join(', ')}
+Long answers: ${childResponses.long.join(' | ')}
 
-...from both a child and a parent, about their relationship.
+Parent Assessment Responses:
+Short answers: ${parentResponses.short.join(', ')}
+Long answers: ${parentResponses.long.join(' | ')}
 
-Your job is to:
-1. Analyze the emotional patterns from both sides (trust, conflict, misunderstanding, distance, willingness, fear, etc.)
-2. Identify emotional mismatches, shared desires, or blind spots
-3. Write:
-    - A short emotional profile summary for each person
-    - 1 tailored reflective question for each person
-    - 1 personalized emotional conclusion for each person
-
-Do not reveal the other's exact words. Speak gently, neutrally, and with empathy.
-
-Child short answers:
-${childResponses.short.map((answer: string, index: number) => `${index + 1}. ${answer}`).join('\n')}
-
-Child long answers:
-${childResponses.long.map((answer: string, index: number) => `${index + 1}. ${answer}`).join('\n')}
-
-Parent short answers:
-${parentResponses.short.map((answer: string, index: number) => `${index + 1}. ${answer}`).join('\n')}
-
-Parent long answers:
-${parentResponses.long.map((answer: string, index: number) => `${index + 1}. ${answer}`).join('\n')}
-
-Expected Output Format (JSON):
+Analyze the emotional patterns, communication styles, and relationship dynamics. Provide a structured JSON response with exactly these fields:
 
 {
-  "childProfile": "A few sentences summarizing the child's emotional state, fears, and hopes.",
-  "parentProfile": "A few sentences summarizing the parent's emotional state, confusion, and intentions.",
-  "childQuestion": "Your tailored question for the child here",
-  "parentQuestion": "Your tailored question for the parent here",
-  "childConclusion": "Encouraging, emotionally intelligent message for the child",
-  "parentConclusion": "Encouraging, emotionally intelligent message for the parent"
-}`;
+  "childProfile": "A compassionate analysis of the child's emotional state, communication style, and needs based on their responses",
+  "parentProfile": "A thoughtful analysis of the parent's perspective, expectations, and relationship approach based on their responses", 
+  "childQuestion": "A meaningful question the child could ask their parent to improve understanding and communication",
+  "parentQuestion": "A meaningful question the parent could ask their child to improve understanding and communication",
+  "childConclusion": "Specific, encouraging advice for the child to strengthen the relationship",
+  "parentConclusion": "Specific, encouraging advice for the parent to strengthen the relationship"
+}
+
+Return only valid JSON. [/INST]`;
 
     console.log('Sending request to Hugging Face API...');
     
