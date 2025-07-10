@@ -277,7 +277,7 @@ export const useParentChildAssessment = () => {
         .eq('user_id', childId)
         .eq('family_id', familyId);
 
-      console.log('Child conversation responses found:', childConversationResponses?.length || 0);
+      console.log('Child conversation responses found:', childConversationResponses?.length || 0, 'for child:', childId);
 
       if (responseError) {
         console.error('Error fetching child responses:', responseError);
