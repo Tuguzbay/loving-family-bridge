@@ -16,7 +16,7 @@ interface AnalysisResult {
   parentConclusion: string;
 }
 
-const lmStudioUrl = Deno.env.get('LM_STUDIO_URL') || 'http://127.0.0.1:1234';
+const lmStudioUrl = Deno.env.get('LM_STUDIO_URL') || 'http://localhost:1234';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
