@@ -68,19 +68,11 @@ const Dashboard = () => {
         assessmentStatus[child.profiles.id] = hasParentResponses;
         console.log(`Parent assessment for ${child.profiles.full_name}:`, hasParentResponses, assessment);
         
-        // Check if child responses are missing but child has completed conversation
+        // Only link child responses if they're missing, but don't trigger AI analysis automatically
         if (assessment && hasParentResponses && 
             (!assessment.child_responses.short || assessment.child_responses.short.length === 0)) {
           console.log(`Child responses missing for ${child.profiles.full_name}, attempting to link...`);
-          await refreshAndLinkChildResponses(child.profiles.id, family.id);
-        }
-        
-        // If AI analysis is missing but we have both responses, trigger it
-        if (assessment && hasParentResponses && 
-            assessment.child_responses.short.length > 0 && 
-            !assessment.ai_analysis) {
-          console.log(`AI analysis missing for ${child.profiles.full_name}, triggering analysis...`);
-          await refreshAndLinkChildResponses(child.profiles.id, family.id);
+          // Note: This will only link responses, not trigger analysis automatically
         }
         
         // Check child's conversation completion
