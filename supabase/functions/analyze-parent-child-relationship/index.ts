@@ -16,7 +16,7 @@ interface AnalysisResult {
   parentConclusion: string;
 }
 
-const huggingFaceToken = Deno.env.get('HUGGING_FACE_TOKEN');
+const lmStudioUrl = Deno.env.get('LM_STUDIO_URL') || 'http://localhost:1234';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -95,16 +95,8 @@ serve(async (req) => {
     const requestData = await req.json();
     const { parentResponses, childResponses } = validateInput(requestData);
 
-    // Build the prompt with proper Mistral instruction format
-    const prompt = `<s>[INST] You are an emotionally intelligent AI family relationship expert. Analyze the parent and child assessment responses below and provide insights to help them understand each other better.
-
-Child Assessment Responses:
-Short answers: ${childResponses.short.join(', ')}
-Long answers: ${childResponses.long.join(' | ')}
-
-Parent Assessment Responses:
-Short answers: ${parentResponses.short.join(', ')}
-Long answers: ${parentResponses.long.join(' | ')}
+    // Build the prompt for deepseek model
+    const systemPrompt = `You are an emotionally intelligent AI family relationship expert. Analyze the parent and child assessment responses and provide insights to help them understand each other better.
 
 Analyze the emotional patterns, communication styles, and relationship dynamics. Provide a structured JSON response with exactly these fields:
 
@@ -117,40 +109,47 @@ Analyze the emotional patterns, communication styles, and relationship dynamics.
   "parentConclusion": "Specific, encouraging advice for the parent to strengthen the relationship"
 }
 
-Return only valid JSON. [/INST]`;
+Return only valid JSON.`;
 
-    console.log('Sending request to Hugging Face API...');
+    const userPrompt = `Child Assessment Responses:
+Short answers: ${childResponses.short.join(', ')}
+Long answers: ${childResponses.long.join(' | ')}
+
+Parent Assessment Responses:
+Short answers: ${parentResponses.short.join(', ')}
+Long answers: ${parentResponses.long.join(' | ')}`;
+
+    console.log('Sending request to LM Studio API...');
     
-    const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1', {
+    const response = await fetch(`${lmStudioUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${huggingFaceToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        inputs: prompt,
-        parameters: {
-          max_new_tokens: 1000,
-          temperature: 0.7,
-          top_p: 0.9,
-          return_full_text: false
-        }
+        model: 'deepseek-r1-distill-qwen-7b',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+        stream: false
       }),
     });
 
     if (!response.ok) {
-      console.error(`Hugging Face API error: ${response.status} ${response.statusText}`);
+      console.error(`LM Studio API error: ${response.status} ${response.statusText}`);
       throw new Error(`API error: ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('Raw Hugging Face response:', data);
+    console.log('Raw LM Studio response:', data);
     
-    const generatedText = Array.isArray(data) 
-      ? data[0]?.generated_text || ''
-      : data.generated_text || '';
+    // Extract content from OpenAI-compatible response format
+    const generatedText = data.choices?.[0]?.message?.content || '';
 
-    console.log('Generated HuggingFace output:', generatedText);
+    console.log('Generated LM Studio output:', generatedText);
 
     // Try to extract structured JSON first
     const structuredResult = extractJSON(generatedText);
