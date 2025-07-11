@@ -39,7 +39,13 @@ const ErrorScreen = ({ error, onBack, childName }: { error: string, onBack: () =
   </div>
 );
 
-const IncompleteAssessmentScreen = ({ onBack, childName }: { onBack: () => void, childName: string }) => (
+const IncompleteAssessmentScreen = ({ onBack, childName, onGenerateInsights, canGenerateInsights, isGenerating }: { 
+  onBack: () => void, 
+  childName: string,
+  onGenerateInsights?: () => void,
+  canGenerateInsights?: boolean,
+  isGenerating?: boolean
+}) => (
   <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
     <div className="max-w-2xl mx-auto">
       <Button onClick={onBack} variant="ghost" className="mb-4">
@@ -49,13 +55,32 @@ const IncompleteAssessmentScreen = ({ onBack, childName }: { onBack: () => void,
         <CardHeader>
           <CardTitle className="flex items-center">
             <Heart className="h-5 w-5 mr-2 text-blue-600" />
-            Assessment Incomplete
+            {canGenerateInsights ? 'Generate AI Insights' : 'Assessment Incomplete'}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="text-gray-600">
-            Both you and {childName} need to complete your assessments before insights become available.
+            {canGenerateInsights 
+              ? `Both you and ${childName} have completed your assessments. Click below to generate personalized insights.`
+              : `Both you and ${childName} need to complete your assessments before insights become available.`
+            }
           </p>
+          {canGenerateInsights && onGenerateInsights && (
+            <Button 
+              onClick={onGenerateInsights} 
+              disabled={isGenerating}
+              className="w-full"
+            >
+              {isGenerating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Generating insights...
+                </>
+              ) : (
+                'Generate AI Insights'
+              )}
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -115,7 +140,7 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
   const [assessment, setAssessment] = useState<ParentChildAssessment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [analysisAttempted, setAnalysisAttempted] = useState(false);
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -132,32 +157,8 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
         
         console.log('Assessment data loaded for insights:', data);
         console.log('AI analysis exists:', !!data?.ai_analysis);
-        console.log('AI analysis content:', data?.ai_analysis);
         
-        // If AI analysis is missing but we have both responses, trigger it (only once)
-        if (!data.ai_analysis && 
-            data.parent_responses.short.length > 0 && 
-            data.child_responses.short.length > 0 &&
-            !analysisAttempted) {
-          console.log('AI analysis missing, triggering analysis for child:', child.full_name);
-          setAnalysisAttempted(true);
-          try {
-            await refreshAndLinkChildResponses(child.id, familyId);
-            // Wait a moment for the analysis to complete
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            // Reload assessment after triggering analysis
-            const updatedData = await getAssessment(child.id);
-            if (mounted && updatedData) {
-              setAssessment(updatedData);
-              console.log('Updated assessment after triggering analysis:', updatedData);
-            }
-          } catch (analysisError) {
-            console.error('Error triggering AI analysis:', analysisError);
-            setError('Failed to generate insights. Please try again later.');
-          }
-        } else {
-          setAssessment(data);
-        }
+        setAssessment(data);
         
         if (data.ai_analysis?.error) {
           setError(data.ai_analysis.error);
@@ -173,7 +174,30 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
 
     loadAssessment();
     return () => { mounted = false; };
-  }, [child.id, getAssessment, refreshAndLinkChildResponses, familyId]);
+  }, [child.id, getAssessment]);
+
+  const handleGenerateInsights = async () => {
+    if (!assessment) return;
+    
+    setIsGeneratingInsights(true);
+    try {
+      console.log('Manually triggering AI analysis for child:', child.full_name);
+      await refreshAndLinkChildResponses(child.id, familyId);
+      
+      // Wait for analysis to complete and reload assessment
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      const updatedData = await getAssessment(child.id);
+      if (updatedData) {
+        setAssessment(updatedData);
+        console.log('Updated assessment after manual analysis:', updatedData);
+      }
+    } catch (analysisError) {
+      console.error('Error generating AI insights:', analysisError);
+      setError('Failed to generate insights. Please try again later.');
+    } finally {
+      setIsGeneratingInsights(false);
+    }
+  };
 
   if (loading) {
     return <LoadingScreen />;
@@ -190,10 +214,18 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
   }
 
   if (!assessment?.ai_analysis) {
+    // Check if both parent and child have completed their responses
+    const hasParentResponses = assessment?.parent_responses?.short?.length > 0;
+    const hasChildResponses = assessment?.child_responses?.short?.length > 0;
+    const canGenerateInsights = hasParentResponses && hasChildResponses;
+    
     return (
       <IncompleteAssessmentScreen 
         onBack={onBack}
         childName={child.full_name}
+        onGenerateInsights={canGenerateInsights ? handleGenerateInsights : undefined}
+        canGenerateInsights={canGenerateInsights}
+        isGenerating={isGeneratingInsights}
       />
     );
   }
@@ -217,10 +249,17 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
                          ai_analysis.childConclusion || ai_analysis.parentConclusion;
 
   if (!hasValidContent) {
+    const hasParentResponses = assessment?.parent_responses?.short?.length > 0;
+    const hasChildResponses = assessment?.child_responses?.short?.length > 0;
+    const canGenerateInsights = hasParentResponses && hasChildResponses;
+    
     return (
       <IncompleteAssessmentScreen 
         onBack={onBack}
         childName={child.full_name}
+        onGenerateInsights={canGenerateInsights ? handleGenerateInsights : undefined}
+        canGenerateInsights={canGenerateInsights}
+        isGenerating={isGeneratingInsights}
       />
     );
   }
