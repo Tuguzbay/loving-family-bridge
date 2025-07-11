@@ -1,4 +1,5 @@
 
+// Uses LM Studio local model: deepseek-r1-distill-qwen-7b
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -16,7 +17,7 @@ interface AnalysisResult {
   parentConclusion: string;
 }
 
-const lmStudioUrl = Deno.env.get('LM_STUDIO_URL') || 'http://localhost:1234';
+const lmStudioUrl = Deno.env.get('LM_STUDIO_URL') || 'http://127.0.0.1:1234';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,7 +79,7 @@ function parseTextResponse(text: string): Partial<AnalysisResult> {
     const match = text.match(pattern);
     if (match && match[1]) {
       result[key as keyof AnalysisResult] = match[1].trim()
-        .replace(/^["']|["']$/g, '')
+        .replace(/^['"]|['"]$/g, '')
         .replace(/\*+/g, '');
     }
   }
@@ -111,13 +112,7 @@ Analyze the emotional patterns, communication styles, and relationship dynamics.
 
 Return only valid JSON.`;
 
-    const userPrompt = `Child Assessment Responses:
-Short answers: ${childResponses.short.join(', ')}
-Long answers: ${childResponses.long.join(' | ')}
-
-Parent Assessment Responses:
-Short answers: ${parentResponses.short.join(', ')}
-Long answers: ${parentResponses.long.join(' | ')}`;
+    const userPrompt = `Child Assessment Responses:\nShort answers: ${childResponses.short.join(', ')}\nLong answers: ${childResponses.long.join(' | ')}\n\nParent Assessment Responses:\nShort answers: ${parentResponses.short.join(', ')}\nLong answers: ${parentResponses.long.join(' | ')}`;
 
     console.log('Sending request to LM Studio API...');
     
@@ -163,7 +158,21 @@ Long answers: ${parentResponses.long.join(' | ')}`;
     // Fallback to parsed sections if JSON extraction fails
     console.log('Falling back to text parsing');
     const sections = parseTextResponse(generatedText);
-    return new Response(JSON.stringify(sections), {
+    const hasAnySection = Object.keys(sections).length > 0 && Object.values(sections).some(Boolean);
+    if (hasAnySection) {
+      console.log('Returning partial analysis result:', sections);
+      return new Response(JSON.stringify({ ...sections, _warning: 'Partial result: model did not return full JSON.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // If everything fails, return a clear error with the raw output
+    console.error('Model output could not be parsed. Raw output:', generatedText);
+    return new Response(JSON.stringify({
+      error: 'Model output could not be parsed. See raw_output.',
+      raw_output: generatedText
+    }), {
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

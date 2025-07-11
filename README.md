@@ -59,6 +59,23 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- **LM Studio (local LLM server, model: deepseek-r1-distill-qwen-7b) for AI analysis**
+
+## AI Model Setup (LM Studio)
+
+This project uses a local LLM via [LM Studio](https://lmstudio.ai/) for all AI-powered analysis (no Hugging Face or cloud models required).
+
+**Model:** `deepseek-r1-distill-qwen-7b`
+
+**How to run locally:**
+
+1. Download and install [LM Studio](https://lmstudio.ai/).
+2. Download the `deepseek-r1-distill-qwen-7b` model in LM Studio.
+3. Start the LM Studio server (default: http://localhost:1234).
+4. (Optional) If your LM Studio server is running on a different host/port, set the environment variable `LM_STUDIO_URL` accordingly (e.g., `LM_STUDIO_URL=http://localhost:1234`).
+5. The Supabase Edge Function will send analysis requests to your local LM Studio server.
+
+**No Hugging Face API or cloud keys are required.**
 
 ## How can I deploy this project?
 
