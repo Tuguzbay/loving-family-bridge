@@ -347,7 +347,8 @@ export const useParentChildAssessment = () => {
       
       if (childResponses.short.length > 0 && childResponses.long.length > 0 && 
           parentResponses && isAssessmentResponses(parentResponses) &&
-          parentResponses.short.length > 0) {
+          parentResponses.short.length > 0 && 
+          !existingAssessment.ai_analysis) { // Only trigger if AI analysis doesn't exist
         console.log('Triggering AI analysis with data:', {
           assessmentId: existingAssessment.id,
           childResponsesCount: childResponses.short.length + childResponses.long.length,
@@ -355,7 +356,11 @@ export const useParentChildAssessment = () => {
         });
         await triggerAIAnalysis(existingAssessment.id, parentResponses, childResponses);
       } else {
-        console.log('AI analysis conditions not met, skipping trigger');
+        console.log('AI analysis conditions not met or already exists, skipping trigger', {
+          hasChildResponses: childResponses.short.length > 0,
+          hasParentResponses: parentResponses && isAssessmentResponses(parentResponses) && parentResponses.short.length > 0,
+          aiAnalysisExists: !!existingAssessment.ai_analysis
+        });
       }
 
       return { data: updatedAssessment };
