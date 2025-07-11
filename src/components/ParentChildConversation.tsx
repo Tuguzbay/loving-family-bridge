@@ -50,9 +50,10 @@ interface ParentChildConversationProps {
   familyId: string;
   onComplete: () => void;
   onBack: () => void;
+  refreshFamilyData?: () => void;
 }
 
-export const ParentChildConversation = ({ child, familyId, onComplete, onBack }: ParentChildConversationProps) => {
+export const ParentChildConversation = ({ child, familyId, onComplete, onBack, refreshFamilyData }: ParentChildConversationProps) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [responses, setResponses] = useState<{ [key: number]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -117,6 +118,7 @@ export const ParentChildConversation = ({ child, familyId, onComplete, onBack }:
           description: `Your responses about ${child.full_name} have been saved.`
         });
         onComplete();
+        if (refreshFamilyData) refreshFamilyData();
       }
     } catch (error) {
       toast({

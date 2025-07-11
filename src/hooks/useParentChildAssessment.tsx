@@ -133,13 +133,19 @@ export const useParentChildAssessment = () => {
   const triggerAIAnalysis = async (
     assessmentId: string,
     parentResponses: AssessmentResponses,
-    childResponses: AssessmentResponses
+    childResponses: AssessmentResponses,
+    retryCount = 0
   ) => {
     setAnalysisStatus('loading');
     try {
       // Validate responses before sending
-      if (parentResponses.short.length === 0 || childResponses.short.length === 0) {
-        throw new Error('Incomplete responses for analysis');
+      if (
+        parentResponses.short.length === 0 ||
+        parentResponses.long.length === 0 ||
+        childResponses.short.length === 0 ||
+        childResponses.long.length === 0
+      ) {
+        throw new Error('Both parent and child must complete all short and long responses for analysis.');
       }
 
       console.log('Triggering AI analysis with:', {
@@ -151,9 +157,9 @@ export const useParentChildAssessment = () => {
       const { data: analysisResult, error } = await supabase.functions.invoke(
         'analyze-parent-child-relationship',
         {
-          body: { 
+          body: {
             parentResponses,
-            childResponses 
+            childResponses
           }
         }
       );
@@ -198,13 +204,22 @@ export const useParentChildAssessment = () => {
     } catch (error) {
       console.error('Error with AI analysis:', error);
       setAnalysisStatus('error');
+      if (retryCount < 2) {
+        console.log('Retrying AI analysis, attempt', retryCount + 1);
+        return await triggerAIAnalysis(assessmentId, parentResponses, childResponses, retryCount + 1);
+      }
       toast({
         title: "Analysis Failed",
         description: error.message || "Couldn't generate insights",
         variant: "destructive"
       });
-      return { error: error.message };
+      return { error: error.message, canRetry: true };
     }
+  };
+
+  // Retry function for UI
+  const retryAnalysis = async (assessmentId: string, parentResponses: AssessmentResponses, childResponses: AssessmentResponses) => {
+    return await triggerAIAnalysis(assessmentId, parentResponses, childResponses, 0);
   };
 
   const getAssessment = useCallback(async (childId: string): Promise<ParentChildAssessment | null> => {
@@ -266,25 +281,18 @@ export const useParentChildAssessment = () => {
 
   const refreshAndLinkChildResponses = async (childId: string, familyId: string) => {
     if (!user) return { error: 'No user found' };
-    
     try {
       console.log('Linking child responses for:', childId);
-      
       // Get child's conversation responses
       const { data: childConversationResponses, error: responseError } = await supabase
         .from('conversation_responses')
         .select('*')
         .eq('user_id', childId)
         .eq('family_id', familyId);
-
-      console.log('Child conversation responses found:', childConversationResponses?.length || 0, 'for child:', childId);
-
       if (responseError) {
         console.error('Error fetching child responses:', responseError);
         return { error: responseError.message };
       }
-
-      // Convert conversation responses to assessment format
       let childResponses: AssessmentResponses = { short: [], long: [] };
       if (childConversationResponses && childConversationResponses.length > 0) {
         childResponses.short = childConversationResponses
@@ -296,9 +304,6 @@ export const useParentChildAssessment = () => {
           .sort((a, b) => a.question_id - b.question_id)
           .map(r => r.response);
       }
-
-      console.log('Processed child responses:', childResponses);
-
       // Check if assessment exists and get it
       const { data: existingAssessment, error: assessmentError } = await supabase
         .from('parent_child_assessments')
@@ -306,18 +311,13 @@ export const useParentChildAssessment = () => {
         .eq('child_id', childId)
         .eq('family_id', familyId)
         .maybeSingle();
-
       if (assessmentError) {
         console.error('Error fetching assessment:', assessmentError);
         return { error: assessmentError.message };
       }
-
       if (!existingAssessment) {
         return { error: 'No parent assessment found for this child' };
       }
-
-      console.log('Existing assessment found:', existingAssessment.id);
-
       // Update the assessment with child responses
       const { data: updatedAssessment, error: updateError } = await supabase
         .from('parent_child_assessments')
@@ -328,27 +328,20 @@ export const useParentChildAssessment = () => {
         .eq('id', existingAssessment.id)
         .select()
         .maybeSingle();
-
       if (updateError) {
         console.error('Error updating assessment:', updateError);
         return { error: updateError.message };
       }
-
-      console.log('Assessment updated with child responses');
-
       // Now trigger AI analysis if both have responses
       const parentResponses = existingAssessment.parent_responses;
-      console.log('Checking if AI analysis should be triggered:', {
-        childResponsesShort: childResponses.short.length,
-        childResponsesLong: childResponses.long.length,
-        hasParentResponses: !!parentResponses,
-        isValidParentResponses: isAssessmentResponses(parentResponses)
-      });
-      
-      if (childResponses.short.length > 0 && childResponses.long.length > 0 && 
-          parentResponses && isAssessmentResponses(parentResponses) &&
-          parentResponses.short.length > 0 && 
-          !existingAssessment.ai_analysis) { // Only trigger if AI analysis doesn't exist
+      if (
+        childResponses.short.length > 0 &&
+        childResponses.long.length > 0 &&
+        parentResponses && isAssessmentResponses(parentResponses) &&
+        parentResponses.short.length > 0 &&
+        parentResponses.long.length > 0 &&
+        !existingAssessment.ai_analysis
+      ) {
         console.log('Triggering AI analysis with data:', {
           assessmentId: existingAssessment.id,
           childResponsesCount: childResponses.short.length + childResponses.long.length,
@@ -362,8 +355,9 @@ export const useParentChildAssessment = () => {
           aiAnalysisExists: !!existingAssessment.ai_analysis
         });
       }
-
-      return { data: updatedAssessment };
+      // Always re-fetch the latest assessment and return it
+      const latest = await getAssessment(childId);
+      return { data: latest };
     } catch (error) {
       console.error('Error in refreshAndLinkChildResponses:', error);
       return { error: error.message };

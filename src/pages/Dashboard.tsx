@@ -117,6 +117,8 @@ const Dashboard = () => {
         }));
       });
     }
+    // Always refresh family data after assessment completion
+    refreshFamilyData();
   };
 
   const handleSignOut = async () => {
@@ -162,6 +164,9 @@ const Dashboard = () => {
       // Ensure UI updates by forcing a state refresh
       setRefreshKey(prev => prev + 1);
       
+      // Always refresh family data after joining
+      await refreshFamilyData();
+
       return { data: result.data };
     } catch (error) {
       console.error('Error in handleJoinFamily:', error);
@@ -219,6 +224,7 @@ const Dashboard = () => {
         familyId={family.id}
         onComplete={handleParentChildComplete}
         onBack={() => setSelectedChild(null)}
+        refreshFamilyData={refreshFamilyData}
       />
     );
   }
