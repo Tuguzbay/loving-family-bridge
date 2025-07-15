@@ -9,7 +9,7 @@ import type { FamilyContextType } from './types';
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined);
 
 export const FamilyProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const {
     family,
     familyMembers,
@@ -24,6 +24,23 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
 
   const { fetchFamilyData } = useFamilyDataFetching();
   const { createFamily: createFamilyAction, joinFamily: joinFamilyAction } = useFamilyActions();
+
+  // Don't render children until auth is ready to prevent hook ordering issues
+  if (authLoading) {
+    return (
+      <FamilyContext.Provider value={{
+        family: null,
+        familyMembers: [],
+        conversationCompletion: null,
+        loading: true,
+        createFamily: async () => ({ error: 'Loading...' }),
+        joinFamily: async () => ({ error: 'Loading...' }),
+        refreshFamilyData: async () => {}
+      }}>
+        {children}
+      </FamilyContext.Provider>
+    );
+  }
 
   const refreshFamilyData = async () => {
     console.log('FamilyContext: Manually refreshing family data...');
