@@ -17,7 +17,12 @@ interface AnalysisResult {
   parentConclusion: string;
 }
 
-const lmStudioUrl = Deno.env.get('LM_STUDIO_URL') || 'http://127.0.0.1:1234';
+const lmStudioUrl = (typeof globalThis.Deno !== 'undefined' && globalThis.Deno.env.get('LM_STUDIO_URL')) || 'http://127.0.0.1:1234';
+
+const isLikelyCloud = typeof globalThis.Deno !== 'undefined' && typeof globalThis.Deno.env.get('SUPABASE_PROJECT_REF') === 'string';
+if (isLikelyCloud && lmStudioUrl.includes('127.0.0.1')) {
+  console.warn('[WARNING] You are running this Edge Function on Supabase Cloud, but LM Studio is set to 127.0.0.1. Cloud functions cannot access your local machine. Please run the function locally with `supabase functions serve`.');
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

@@ -148,26 +148,48 @@ export const useParentChildAssessment = () => {
         throw new Error('Both parent and child must complete all short and long responses for analysis.');
       }
 
-      console.log('Triggering AI analysis with:', {
-        assessmentId,
-        parentResponsesCount: parentResponses.short.length + parentResponses.long.length,
-        childResponsesCount: childResponses.short.length + childResponses.long.length
+      // Build prompts (reuse your system/user prompt logic as before)
+      // JSON structure for LM Studio prompt (copy this into LM Studio for reference):
+      // {
+      //   "childProfile": "...",
+      //   "parentProfile": "...",
+      //   "childQuestion": "...",
+      //   "parentQuestion": "...",
+      //   "childConclusion": "...",
+      //   "parentConclusion": "..."
+      // }
+
+      const systemPrompt = `
+You are an emotionally intelligent AI family relationship expert. 
+Analyze the parent and child assessment responses and provide insights to help them understand each other better.
+
+Return ONLY valid JSON with ALL of these fields, even if you have to leave some empty:
+
+{
+  "childProfile": "...",
+  "parentProfile": "...",
+  "childQuestion": "...",
+  "parentQuestion": "...",
+  "childConclusion": "...",
+  "parentConclusion": "..."
+}
+
+Do not include any extra text, explanations, or comments. Do not use < or > in the keys. Only output the JSON object.`;
+      const userPrompt = `Child Assessment Responses:\nShort answers: ${childResponses.short.join(', ')}\nLong answers: ${childResponses.long.join(' | ')}\n\nParent Assessment Responses:\nShort answers: ${parentResponses.short.join(', ')}\nLong answers: ${parentResponses.long.join(' | ')}`;
+
+      // Call local backend
+      const response = await fetch('http://localhost:4000/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parentResponses,
+          childResponses,
+          systemPrompt,
+          userPrompt
+        })
       });
+      const analysisResult = await response.json();
 
-      const { data: analysisResult, error } = await supabase.functions.invoke(
-        'analyze-parent-child-relationship',
-        {
-          body: {
-            parentResponses,
-            childResponses
-          }
-        }
-      );
-
-      console.log('Supabase function raw result:', analysisResult);
-      console.log('Supabase function error:', error);
-
-      if (error) throw error;
       if (!analysisResult) throw new Error('No analysis result returned');
 
       // Validate and store the analysis

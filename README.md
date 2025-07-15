@@ -88,3 +88,45 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+## Running Supabase Edge Functions Locally for LM Studio Integration
+
+To use the AI analysis feature, you must run the Supabase Edge Function locally so it can connect to your local LM Studio server.
+
+### Steps:
+
+1. **Start LM Studio**
+   - Open LM Studio and load the `deepseek-r1-distill-qwen-7b` model.
+   - Make sure the server is running (default: http://127.0.0.1:1234).
+   - Test in your browser: [http://127.0.0.1:1234/v1/models](http://127.0.0.1:1234/v1/models)
+
+2. **Start Supabase Edge Functions locally**
+   - Install the Supabase CLI if you haven't already: https://supabase.com/docs/guides/cli
+   - In your project root, run:
+     ```sh
+     supabase functions serve --env-file ./supabase/.env
+     ```
+   - This will start the Edge Function locally, allowing it to connect to LM Studio on `127.0.0.1`.
+
+3. **Run your frontend as usual**
+   - In another terminal, run:
+     ```sh
+     npm run dev
+     ```
+
+4. **Test the AI analysis**
+   - Use the app as normal. When you trigger an analysis, you should see logs in both LM Studio and the Supabase function terminal.
+
+### Troubleshooting
+
+- **No logs in LM Studio?**
+  - Make sure you are running the Edge Function locally (not on Supabase Cloud).
+  - Make sure LM Studio is running and listening on the correct port.
+  - Test with: `curl http://127.0.0.1:1234/v1/models`
+- **Edge Function errors about connection refused?**
+  - LM Studio is not running, or the port is wrong.
+- **Still not working?**
+  - Check your firewall or antivirus settings.
+  - Make sure nothing else is using port 1234.
+
+**Note:** Supabase Cloud Functions cannot access your local LM Studio. For local development, always use `supabase functions serve`.
