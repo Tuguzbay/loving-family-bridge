@@ -1,4 +1,5 @@
 
+import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Family, FamilyMember, ConversationCompletion } from '@/types/profile';
@@ -6,7 +7,7 @@ import type { Family, FamilyMember, ConversationCompletion } from '@/types/profi
 export const useFamilyDataFetching = () => {
   const { user } = useAuth();
 
-  const fetchFamilyData = async (
+  const fetchFamilyData = useCallback(async (
     setFamily: (family: Family | null) => void,
     setFamilyMembers: (members: FamilyMember[]) => void,
     setConversationCompletion: (completion: ConversationCompletion | null) => void,
@@ -143,7 +144,7 @@ export const useFamilyDataFetching = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   return { fetchFamilyData };
 };
