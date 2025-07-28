@@ -177,18 +177,20 @@ Return ONLY valid JSON with ALL of these fields, even if you have to leave some 
 Do not include any extra text, explanations, or comments. Do not use < or > in the keys. Only output the JSON object.`;
       const userPrompt = `Child Assessment Responses:\nShort answers: ${childResponses.short.join(', ')}\nLong answers: ${childResponses.long.join(' | ')}\n\nParent Assessment Responses:\nShort answers: ${parentResponses.short.join(', ')}\nLong answers: ${parentResponses.long.join(' | ')}`;
 
-      // Call local backend
-      const response = await fetch('http://localhost:4000/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          parentResponses,
-          childResponses,
-          systemPrompt,
-          userPrompt
-        })
-      });
-      const analysisResult = await response.json();
+      // Call Supabase Edge Function using OpenRouter
+      const { data: analysisResult, error: functionError } = await supabase.functions.invoke(
+        'analyze-parent-child-relationship',
+        {
+          body: {
+            parentResponses,
+            childResponses
+          }
+        }
+      );
+
+      if (functionError) {
+        throw new Error(`Function error: ${functionError.message}`);
+      }
 
       if (!analysisResult) throw new Error('No analysis result returned');
 

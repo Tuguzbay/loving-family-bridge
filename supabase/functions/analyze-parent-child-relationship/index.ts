@@ -1,5 +1,5 @@
 
-// Uses LM Studio local model: deepseek-r1-distill-qwen-7b
+// Uses OpenRouter.ai API for AI analysis
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -17,11 +17,10 @@ interface AnalysisResult {
   parentConclusion: string;
 }
 
-const lmStudioUrl = (typeof globalThis.Deno !== 'undefined' && globalThis.Deno.env.get('LM_STUDIO_URL')) || 'http://127.0.0.1:1234';
+const openRouterApiKey = Deno.env.get('OPENROUTER_API_KEY');
 
-const isLikelyCloud = typeof globalThis.Deno !== 'undefined' && typeof globalThis.Deno.env.get('SUPABASE_PROJECT_REF') === 'string';
-if (isLikelyCloud && lmStudioUrl.includes('127.0.0.1')) {
-  console.warn('[WARNING] You are running this Edge Function on Supabase Cloud, but LM Studio is set to 127.0.0.1. Cloud functions cannot access your local machine. Please run the function locally with `supabase functions serve`.');
+if (!openRouterApiKey) {
+  console.error('OPENROUTER_API_KEY is not set');
 }
 
 const corsHeaders = {
@@ -119,15 +118,22 @@ Return only valid JSON.`;
 
     const userPrompt = `Child Assessment Responses:\nShort answers: ${childResponses.short.join(', ')}\nLong answers: ${childResponses.long.join(' | ')}\n\nParent Assessment Responses:\nShort answers: ${parentResponses.short.join(', ')}\nLong answers: ${parentResponses.long.join(' | ')}`;
 
-    console.log('Sending request to LM Studio API...');
+    console.log('Sending request to OpenRouter API...');
     
-    const response = await fetch(`${lmStudioUrl}/v1/chat/completions`, {
+    if (!openRouterApiKey) {
+      throw new Error('OpenRouter API key is not configured');
+    }
+    
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${openRouterApiKey}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://your-app.com', // Optional: for analytics
+        'X-Title': 'Family Assessment App', // Optional: for analytics
       },
       body: JSON.stringify({
-        model: 'deepseek-r1-distill-qwen-7b',
+        model: 'anthropic/claude-3.5-sonnet:beta',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -139,17 +145,18 @@ Return only valid JSON.`;
     });
 
     if (!response.ok) {
-      console.error(`LM Studio API error: ${response.status} ${response.statusText}`);
-      throw new Error(`API error: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`OpenRouter API error: ${response.status} ${response.statusText}`, errorText);
+      throw new Error(`OpenRouter API error: ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('Raw LM Studio response:', data);
+    console.log('Raw OpenRouter response:', data);
     
     // Extract content from OpenAI-compatible response format
     const generatedText = data.choices?.[0]?.message?.content || '';
 
-    console.log('Generated LM Studio output:', generatedText);
+    console.log('Generated OpenRouter output:', generatedText);
 
     // Try to extract structured JSON first
     const structuredResult = extractJSON(generatedText);
