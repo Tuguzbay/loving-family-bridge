@@ -142,7 +142,7 @@ Return only valid JSON.`;
           'X-Title': 'Family Assessment App', // Optional: for analytics
         },
         body: JSON.stringify({
-          model: 'qwen/qwen-2.5-7b-instruct:free',
+          model: 'openai/gpt-4.1-2025-04-14',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
