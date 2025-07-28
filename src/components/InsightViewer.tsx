@@ -184,6 +184,8 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
       toast({ title: 'Error', description: 'No assessment found.', variant: 'destructive' });
       return;
     }
+    console.log('Generate Insights button clicked for child:', child.full_name);
+    console.log('Current assessment:', assessment);
     setIsGeneratingInsights(true);
     console.log('Generate Insights button clicked for child:', child.full_name);
     try {

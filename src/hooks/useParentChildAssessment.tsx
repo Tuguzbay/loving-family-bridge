@@ -175,9 +175,13 @@ Return ONLY valid JSON with ALL of these fields, even if you have to leave some 
 }
 
 Do not include any extra text, explanations, or comments. Do not use < or > in the keys. Only output the JSON object.`;
-      const userPrompt = `Child Assessment Responses:\nShort answers: ${childResponses.short.join(', ')}\nLong answers: ${childResponses.long.join(' | ')}\n\nParent Assessment Responses:\nShort answers: ${parentResponses.short.join(', ')}\nLong answers: ${parentResponses.long.join(' | ')}`;
+      console.log('Starting AI analysis with data:', {
+        parentResponsesLength: parentResponses.short.length + parentResponses.long.length,
+        childResponsesLength: childResponses.short.length + childResponses.long.length
+      });
 
       // Call Supabase Edge Function using OpenRouter
+      console.log('Calling Supabase Edge Function...');
       const { data: analysisResult, error: functionError } = await supabase.functions.invoke(
         'analyze-parent-child-relationship',
         {
@@ -187,6 +191,8 @@ Do not include any extra text, explanations, or comments. Do not use < or > in t
           }
         }
       );
+
+      console.log('Edge Function response:', { analysisResult, functionError });
 
       if (functionError) {
         throw new Error(`Function error: ${functionError.message}`);
