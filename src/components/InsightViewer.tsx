@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ArrowLeft, Heart, User, Users } from 'lucide-react';
 import { useParentChildAssessment } from '@/hooks/useParentChildAssessment';
 import type { Profile, ParentChildAssessment } from '@/types/profile';
+import { useToast } from '@/hooks/use-toast';
 
 interface InsightViewerProps {
   child: Profile;
@@ -141,6 +142,7 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     let mounted = true;
@@ -177,23 +179,32 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
   }, [child.id, getAssessment]);
 
   const handleGenerateInsights = async () => {
-    if (!assessment) return;
-    
+    if (!assessment) {
+      console.log('No assessment found, cannot generate insights.');
+      toast({ title: 'Error', description: 'No assessment found.', variant: 'destructive' });
+      return;
+    }
     setIsGeneratingInsights(true);
+    console.log('Generate Insights button clicked for child:', child.full_name);
     try {
-      console.log('Manually triggering AI analysis for child:', child.full_name);
+      console.log('Calling refreshAndLinkChildResponses for child:', child.id, 'family:', familyId);
       await refreshAndLinkChildResponses(child.id, familyId);
-      
       // Wait for analysis to complete and reload assessment
       await new Promise(resolve => setTimeout(resolve, 3000));
       const updatedData = await getAssessment(child.id);
+      console.log('Received updated assessment after analysis:', updatedData);
       if (updatedData) {
         setAssessment(updatedData);
-        console.log('Updated assessment after manual analysis:', updatedData);
+        if (!updatedData.ai_analysis) {
+          toast({ title: 'No Insights', description: 'AI analysis did not return any insights.', variant: 'destructive' });
+        }
+      } else {
+        toast({ title: 'Error', description: 'Failed to load updated assessment.', variant: 'destructive' });
       }
     } catch (analysisError) {
       console.error('Error generating AI insights:', analysisError);
       setError('Failed to generate insights. Please try again later.');
+      toast({ title: 'Error', description: 'Failed to generate insights. Please try again later.', variant: 'destructive' });
     } finally {
       setIsGeneratingInsights(false);
     }
