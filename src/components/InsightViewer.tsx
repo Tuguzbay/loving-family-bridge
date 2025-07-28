@@ -226,7 +226,15 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
     );
   }
 
-  if (!assessment?.ai_analysis) {
+  // Check if AI analysis exists and has meaningful content
+  const hasValidAIAnalysis = assessment?.ai_analysis && 
+    typeof assessment.ai_analysis === 'object' && 
+    Object.keys(assessment.ai_analysis).length > 0 &&
+    (assessment.ai_analysis.childProfile || assessment.ai_analysis.parentProfile || 
+     assessment.ai_analysis.childQuestion || assessment.ai_analysis.parentQuestion ||
+     assessment.ai_analysis.childConclusion || assessment.ai_analysis.parentConclusion);
+
+  if (!hasValidAIAnalysis) {
     // Check if both parent and child have completed their responses
     const hasParentResponses = assessment?.parent_responses?.short?.length > 0;
     const hasChildResponses = assessment?.child_responses?.short?.length > 0;
@@ -238,6 +246,7 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
       hasChildResponses,
       canGenerateInsights,
       aiAnalysis: assessment?.ai_analysis,
+      hasValidAIAnalysis,
       parentResponsesData: assessment?.parent_responses,
       childResponsesData: assessment?.child_responses
     });
