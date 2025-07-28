@@ -16,6 +16,7 @@ interface ConversationQuestionsProps {
 export const ConversationQuestions = ({ onComplete }: ConversationQuestionsProps) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const allQuestions = [...shortAnswerQuestions, ...longAnswerQuestions];
   const currentQuestion = allQuestions[currentQuestionIndex];
@@ -30,9 +31,16 @@ export const ConversationQuestions = ({ onComplete }: ConversationQuestionsProps
     }));
   };
   
-  const handleNext = () => {
+  const handleNext = async () => {
     if (isLastQuestion) {
-      onComplete(answers);
+      if (isSubmitting) return; // Prevent double submission
+      setIsSubmitting(true);
+      try {
+        await onComplete(answers);
+      } catch (error) {
+        console.error('Error completing conversation:', error);
+        setIsSubmitting(false); // Reset on error to allow retry
+      }
     } else {
       setCurrentQuestionIndex(prev => prev + 1);
     }
@@ -126,13 +134,13 @@ export const ConversationQuestions = ({ onComplete }: ConversationQuestionsProps
             
             <Button
               onClick={handleNext}
-              disabled={!canProceed}
+              disabled={!canProceed || isSubmitting}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
             >
               {isLastQuestion ? (
                 <>
                   <CheckCircle className="h-4 w-4" />
-                  Complete Assessment
+                  {isSubmitting ? 'Submitting...' : 'Complete Assessment'}
                 </>
               ) : (
                 <>
