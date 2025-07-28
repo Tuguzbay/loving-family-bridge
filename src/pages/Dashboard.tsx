@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, LogOut, Star } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, LogOut, Star, ArrowRight } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useSimpleProfile } from "@/hooks/useSimpleProfile";
 import { useFamily } from "@/contexts/FamilyContext";
@@ -294,6 +295,47 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <div className="grid lg:grid-cols-1 gap-8">
+          {/* Child Conversation Card - Show only for children */}
+          {isChild && (
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl text-gray-800">Your Family Assessment</CardTitle>
+                <CardDescription>
+                  Share your thoughts to help our AI understand your family better
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className={`border rounded-lg p-4 ${hasCompletedConversation ? 'bg-green-50' : 'bg-purple-50'}`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold text-gray-800">Family Assessment</h3>
+                    <Badge variant="secondary" className={`${hasCompletedConversation ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}`}>
+                      {hasCompletedConversation ? 'Completed' : 'Ready to Start'}
+                    </Badge>
+                  </div>
+                  <p className="text-gray-600 text-sm mb-3">
+                    {hasCompletedConversation 
+                      ? "Great job! You've completed your family assessment."
+                      : "Share your thoughts to help our AI understand your family better."
+                    }
+                  </p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">
+                      {hasCompletedConversation ? `Completed ${new Date(conversationCompletion.completed_at).toLocaleDateString()}` : 'Not started'}
+                    </span>
+                    {!hasCompletedConversation && (
+                      <Link to="/conversation">
+                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
+                          Start Conversation
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Family Members */}
           <FamilyMembersCard 
             isChild={isChild}
