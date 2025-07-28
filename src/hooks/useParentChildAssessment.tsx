@@ -313,16 +313,20 @@ Do not include any extra text, explanations, or comments. Do not use < or > in t
     if (!user) return { error: 'No user found' };
     try {
       console.log('Linking child responses for:', childId);
-      // Get child's conversation responses
+      
+      // Get child's conversation responses with proper error handling
       const { data: childConversationResponses, error: responseError } = await supabase
         .from('conversation_responses')
         .select('*')
         .eq('user_id', childId)
         .eq('family_id', familyId);
+        
       if (responseError) {
-        console.error('Error fetching child responses:', responseError);
-        return { error: responseError.message };
+        console.error('Failed to fetch child responses:', responseError);
+        return { error: `Database error: ${responseError.message}` };
       }
+
+      // Process child responses with validation
       let childResponses: AssessmentResponses = { short: [], long: [] };
       if (childConversationResponses && childConversationResponses.length > 0) {
         childResponses.short = childConversationResponses
@@ -334,20 +338,61 @@ Do not include any extra text, explanations, or comments. Do not use < or > in t
           .sort((a, b) => a.question_id - b.question_id)
           .map(r => r.response);
       }
-      // Check if assessment exists and get it
+      
+      console.log('Child responses processed:', {
+        shortCount: childResponses.short.length,
+        longCount: childResponses.long.length,
+        data: childResponses
+      });
+
+      // Validate child responses
+      if (!childResponses.short.length && !childResponses.long.length) {
+        return { error: 'No child responses found. Child must complete their assessment first.' };
+      }
+
+      // Check if assessment exists with proper error handling
       const { data: existingAssessment, error: assessmentError } = await supabase
         .from('parent_child_assessments')
         .select('*')
         .eq('child_id', childId)
         .eq('family_id', familyId)
         .maybeSingle();
+        
       if (assessmentError) {
-        console.error('Error fetching assessment:', assessmentError);
-        return { error: assessmentError.message };
+        console.error('Failed to fetch assessment:', assessmentError);
+        return { error: `Assessment fetch error: ${assessmentError.message}` };
       }
+
       if (!existingAssessment) {
-        return { error: 'No parent assessment found for this child' };
+        // Create new assessment if none exists
+        console.log('No existing assessment found, creating new one');
+        const { data: newAssessment, error: createError } = await supabase
+          .from('parent_child_assessments')
+          .insert({
+            family_id: familyId,
+            parent_id: user.id,
+            child_id: childId,
+            parent_responses: { short: [], long: [] } as any,
+            child_responses: childResponses as any
+          })
+          .select()
+          .single();
+          
+        if (createError) {
+          console.error('Failed to create assessment:', createError);
+          return { error: `Assessment creation error: ${createError.message}` };
+        }
+        
+        console.log('New assessment created:', newAssessment);
+        return { data: await getAssessment(childId) };
       }
+
+      console.log('Existing assessment found:', {
+        id: existingAssessment.id,
+        hasParentResponses: !!existingAssessment.parent_responses,
+        hasAiAnalysis: !!existingAssessment.ai_analysis
+      });
+
       // Update the assessment with child responses
       const { data: updatedAssessment, error: updateError } = await supabase
         .from('parent_child_assessments')
@@ -358,39 +403,59 @@ Do not include any extra text, explanations, or comments. Do not use < or > in t
         .eq('id', existingAssessment.id)
         .select()
         .maybeSingle();
+        
       if (updateError) {
-        console.error('Error updating assessment:', updateError);
-        return { error: updateError.message };
+        console.error('Failed to update assessment:', updateError);
+        return { error: `Assessment update error: ${updateError.message}` };
       }
-      // Now trigger AI analysis if both have responses
+
+      // Validate parent responses before AI analysis
       const parentResponses = existingAssessment.parent_responses;
+      console.log('Parent responses validation:', {
+        exists: !!parentResponses,
+        isValid: isAssessmentResponses(parentResponses),
+        data: parentResponses
+      });
+
+      if (!parentResponses || !isAssessmentResponses(parentResponses)) {
+        return { error: 'Parent responses are missing or invalid. Parent must complete their assessment first.' };
+      }
+
+      if (!parentResponses.short.length || !parentResponses.long.length) {
+        return { error: 'Parent has incomplete responses. Parent must complete all questions.' };
+      }
+
+      // Check if we have sufficient data for AI analysis
       if (
         childResponses.short.length > 0 &&
         childResponses.long.length > 0 &&
-        parentResponses && isAssessmentResponses(parentResponses) &&
         parentResponses.short.length > 0 &&
         parentResponses.long.length > 0 &&
         !existingAssessment.ai_analysis
       ) {
-        console.log('Triggering AI analysis with data:', {
+        console.log('Triggering AI analysis with validated data:', {
           assessmentId: existingAssessment.id,
           childResponsesCount: childResponses.short.length + childResponses.long.length,
           parentResponsesCount: parentResponses.short.length + parentResponses.long.length
         });
+        
         await triggerAIAnalysis(existingAssessment.id, parentResponses, childResponses);
       } else {
-        console.log('AI analysis conditions not met or already exists, skipping trigger', {
-          hasChildResponses: childResponses.short.length > 0,
-          hasParentResponses: parentResponses && isAssessmentResponses(parentResponses) && parentResponses.short.length > 0,
+        console.log('AI analysis conditions not met:', {
+          hasChildShort: childResponses.short.length > 0,
+          hasChildLong: childResponses.long.length > 0,
+          hasParentShort: parentResponses.short.length > 0,
+          hasParentLong: parentResponses.long.length > 0,
           aiAnalysisExists: !!existingAssessment.ai_analysis
         });
       }
+
       // Always re-fetch the latest assessment and return it
       const latest = await getAssessment(childId);
       return { data: latest };
     } catch (error) {
       console.error('Error in refreshAndLinkChildResponses:', error);
-      return { error: error.message };
+      return { error: `Unexpected error: ${error.message}` };
     }
   };
 

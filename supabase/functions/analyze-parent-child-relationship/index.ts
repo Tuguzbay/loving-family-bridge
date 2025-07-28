@@ -124,47 +124,104 @@ Return only valid JSON.`;
       throw new Error('OpenRouter API key is not configured');
     }
     
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openRouterApiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://your-app.com', // Optional: for analytics
-        'X-Title': 'Family Assessment App', // Optional: for analytics
-      },
-      body: JSON.stringify({
-        model: 'qwen/qwen-2.5-7b-instruct:free',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-        stream: false
-      }),
-    });
+    // Add timeout handling for the OpenRouter API call
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      console.log('API request timeout after 30 seconds');
+      controller.abort();
+    }, 30000); // 30 second timeout
+
+    let response;
+    try {
+      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openRouterApiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://your-app.com', // Optional: for analytics
+          'X-Title': 'Family Assessment App', // Optional: for analytics
+        },
+        body: JSON.stringify({
+          model: 'qwen/qwen-2.5-7b-instruct:free',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 1000,
+          stream: false
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+    } catch (fetchError) {
+      clearTimeout(timeout);
+      if (fetchError.name === 'AbortError') {
+        console.error('OpenRouter API request timed out');
+        throw new Error('AI analysis timed out. Please try again.');
+      }
+      console.error('OpenRouter API network error:', fetchError);
+      throw new Error(`Network error: ${fetchError.message}`);
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`OpenRouter API error: ${response.status} ${response.statusText}`, errorText);
-      throw new Error(`OpenRouter API error: ${response.statusText}`);
+      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
-    console.log('Raw OpenRouter response:', data);
+    let data;
+    try {
+      data = await response.json();
+      console.log('Raw OpenRouter response:', data);
+    } catch (jsonError) {
+      console.error('Failed to parse OpenRouter response as JSON:', jsonError);
+      throw new Error('Invalid response format from AI service');
+    }
     
     // Extract content from OpenAI-compatible response format
     const generatedText = data.choices?.[0]?.message?.content || '';
+    
+    if (!generatedText) {
+      console.error('No content in AI response:', data);
+      throw new Error('AI service returned empty response');
+    }
 
     console.log('Generated OpenRouter output:', generatedText);
 
-    // Try to extract structured JSON first
-    const structuredResult = extractJSON(generatedText);
+    // Try to extract structured JSON first with improved error handling
+    let structuredResult;
+    try {
+      structuredResult = extractJSON(generatedText);
+    } catch (extractError) {
+      console.error('JSON extraction failed:', extractError);
+      structuredResult = null;
+    }
+    
     if (structuredResult) {
       console.log('Successfully extracted structured JSON:', structuredResult);
       return new Response(JSON.stringify(structuredResult), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Try cleaning the text before fallback parsing
+    console.log('Attempting text cleaning before fallback parsing');
+    const cleanedText = generatedText
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+    
+    try {
+      const cleanedResult = extractJSON(cleanedText);
+      if (cleanedResult) {
+        console.log('Successfully extracted JSON after cleaning:', cleanedResult);
+        return new Response(JSON.stringify(cleanedResult), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (cleanError) {
+      console.log('Cleaned text also failed JSON parsing:', cleanError);
     }
 
     // Fallback to parsed sections if JSON extraction fails
@@ -181,8 +238,8 @@ Return only valid JSON.`;
     // If everything fails, return a clear error with the raw output
     console.error('Model output could not be parsed. Raw output:', generatedText);
     return new Response(JSON.stringify({
-      error: 'Model output could not be parsed. See raw_output.',
-      raw_output: generatedText
+      error: 'Model output could not be parsed. The AI model may have returned malformed data.',
+      raw_output: generatedText.substring(0, 500) + '...' // Truncate for safety
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
