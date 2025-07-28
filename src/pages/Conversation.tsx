@@ -84,13 +84,15 @@ const Conversation = () => {
         throw responsesError;
       }
 
-      // Mark conversation as completed
+      // Mark conversation as completed (upsert to handle multiple attempts)
       const { error: completionError } = await supabase
         .from('conversation_completions')
-        .insert({
+        .upsert({
           user_id: user.id,
           family_id: family.id,
           total_questions: Object.keys(answers).length
+        }, {
+          onConflict: 'user_id,family_id'
         });
 
       if (completionError) {
