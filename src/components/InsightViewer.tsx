@@ -232,6 +232,16 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
     const hasChildResponses = assessment?.child_responses?.short?.length > 0;
     const canGenerateInsights = hasParentResponses && hasChildResponses;
     
+    console.log('Assessment check:', {
+      hasAssessment: !!assessment,
+      hasParentResponses,
+      hasChildResponses,
+      canGenerateInsights,
+      aiAnalysis: assessment?.ai_analysis,
+      parentResponsesData: assessment?.parent_responses,
+      childResponsesData: assessment?.child_responses
+    });
+    
     return (
       <IncompleteAssessmentScreen 
         onBack={onBack}
