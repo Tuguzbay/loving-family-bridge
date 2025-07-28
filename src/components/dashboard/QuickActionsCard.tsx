@@ -1,13 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageCircle, Heart } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Heart } from "lucide-react";
 import type { Profile } from "@/types/profile";
 
 interface QuickActionsCardProps {
   isChild: boolean;
   isParent: boolean;
-  hasCompletedConversation: boolean;
   family: any;
   familyMembers: any[];
   childAssessments: Record<string, boolean>;
@@ -19,7 +17,6 @@ interface QuickActionsCardProps {
 export const QuickActionsCard = ({ 
   isChild, 
   isParent, 
-  hasCompletedConversation, 
   family, 
   familyMembers, 
   childAssessments,
@@ -41,20 +38,7 @@ export const QuickActionsCard = ({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid md:grid-cols-2 gap-4">
-          {!hasCompletedConversation ? (
-            <Link to="/conversation">
-              <Button variant="outline" className="h-20 flex-col space-y-2 w-full">
-                <MessageCircle className={`h-6 w-6 ${isChild ? 'text-purple-600' : 'text-blue-600'}`} />
-                <span>{isChild ? "Start Chatting" : "Start Conversation"}</span>
-              </Button>
-            </Link>
-          ) : (
-            <Button variant="outline" className="h-20 flex-col space-y-2" disabled>
-              <MessageCircle className="h-6 w-6 text-green-600" />
-              <span>Assessment Complete</span>
-            </Button>
-          )}
+        <div className="grid md:grid-cols-1 gap-4">
           
           {isParent && family && familyMembers.some(member => member.profiles.user_type === 'child') ? (
             <div className="space-y-2">

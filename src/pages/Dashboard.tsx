@@ -13,7 +13,7 @@ import { useParentChildAssessment } from "@/hooks/useParentChildAssessment";
 import { supabase } from "@/integrations/supabase/client";
 import { FamilySetupCard } from "@/components/dashboard/FamilySetupCard";
 import { StatsCards } from "@/components/dashboard/StatsCards";
-import { ConversationsCard } from "@/components/dashboard/ConversationsCard";
+
 import { FamilyMembersCard } from "@/components/dashboard/FamilyMembersCard";
 import { ParentChildAssessmentsCard } from "@/components/dashboard/ParentChildAssessmentsCard";
 import { QuickActionsCard } from "@/components/dashboard/QuickActionsCard";
@@ -293,16 +293,7 @@ const Dashboard = () => {
         />
 
         {/* Main Content */}
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Active Conversations */}
-          <ConversationsCard 
-            isChild={isChild}
-            hasCompletedConversation={hasCompletedConversation}
-            conversationCompletion={conversationCompletion}
-            isParent={isParent}
-            hasCompletedAnyParentChildAssessment={Object.values(childAssessments).some(Boolean)}
-          />
-
+        <div className="grid lg:grid-cols-1 gap-8">
           {/* Family Members */}
           <FamilyMembersCard 
             isChild={isChild}
@@ -325,7 +316,6 @@ const Dashboard = () => {
         <QuickActionsCard 
           isChild={isChild}
           isParent={isParent}
-          hasCompletedConversation={hasCompletedConversation}
           family={family}
           familyMembers={familyMembers}
           childAssessments={childAssessments}
