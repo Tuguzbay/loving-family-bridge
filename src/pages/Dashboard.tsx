@@ -299,6 +299,8 @@ const Dashboard = () => {
             isChild={isChild}
             hasCompletedConversation={hasCompletedConversation}
             conversationCompletion={conversationCompletion}
+            isParent={isParent}
+            hasCompletedAnyParentChildAssessment={Object.values(childAssessments).some(Boolean)}
           />
 
           {/* Family Members */}
