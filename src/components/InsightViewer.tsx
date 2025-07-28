@@ -103,33 +103,33 @@ const ProfileSection = ({
   question?: string;
   conclusion?: string;
 }) => (
-  <Card className="shadow-lg bg-white/80 backdrop-blur-sm">
-    <CardHeader>
-      <CardTitle className="flex items-center text-lg text-gray-800">
+  <Card className="shadow-xl bg-white/90 backdrop-blur-sm border-0 p-2">
+    <CardHeader className="pb-4">
+      <CardTitle className="flex items-center text-xl text-gray-800">
         {icon}
         {title}
         <Badge variant="outline" className={`ml-2 ${variant}`}>{title.includes('Parent') ? 'Parent' : 'Child'}</Badge>
       </CardTitle>
     </CardHeader>
-    <CardContent className="space-y-4">
+    <CardContent className="space-y-6">
       {profile && (
-        <div>
-          <h3 className="font-semibold text-gray-800 mb-2">Profile</h3>
-          <p className="text-gray-600 text-sm">{profile}</p>
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl">
+          <h3 className="font-semibold text-gray-800 mb-3 text-base">📋 Profile Analysis</h3>
+          <p className="text-gray-700 leading-relaxed">{profile}</p>
         </div>
       )}
       
       {question && (
-        <div>
-          <h3 className="font-semibold text-gray-800 mb-2">Reflection Question</h3>
-          <p className="text-gray-600 text-sm italic">{question}</p>
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-xl">
+          <h3 className="font-semibold text-gray-800 mb-3 text-base">💭 Reflection Question</h3>
+          <p className="text-gray-700 italic leading-relaxed">"{question}"</p>
         </div>
       )}
       
       {conclusion && (
-        <div>
-          <h3 className="font-semibold text-gray-800 mb-2">Path Forward</h3>
-          <p className="text-gray-600 text-sm">{conclusion}</p>
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl">
+          <h3 className="font-semibold text-gray-800 mb-3 text-base">✨ Path Forward</h3>
+          <p className="text-gray-700 leading-relaxed">{conclusion}</p>
         </div>
       )}
     </CardContent>
@@ -298,7 +298,7 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <Button variant="ghost" onClick={onBack} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
@@ -316,41 +316,32 @@ export const InsightViewer = ({ child, familyId, onBack }: InsightViewerProps) =
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        {/* Scrollable Insights Cards */}
+        <div className="space-y-8">
           {/* Parent Insights */}
-          <ProfileSection 
-            title="For You (Parent)"
-            icon={<User className="h-5 w-5 mr-2 text-blue-600" />}
-            variant=""
-            profile={ai_analysis.parentProfile}
-            question={ai_analysis.parentQuestion}
-            conclusion={ai_analysis.parentConclusion}
-          />
+          <div className="w-full">
+            <ProfileSection 
+              title="For You (Parent)"
+              icon={<User className="h-5 w-5 mr-2 text-blue-600" />}
+              variant=""
+              profile={ai_analysis.parentProfile}
+              question={ai_analysis.parentQuestion}
+              conclusion={ai_analysis.parentConclusion}
+            />
+          </div>
 
           {/* Child Insights */}
-          <ProfileSection 
-            title={`For ${child.full_name}`}
-            icon={<Users className="h-5 w-5 mr-2 text-purple-600" />}
-            variant="bg-purple-100 text-purple-800"
-            profile={ai_analysis.childProfile}
-            question={ai_analysis.childQuestion}
-            conclusion={ai_analysis.childConclusion}
-          />
+          <div className="w-full">
+            <ProfileSection 
+              title={`For ${child.full_name}`}
+              icon={<Users className="h-5 w-5 mr-2 text-purple-600" />}
+              variant="bg-purple-100 text-purple-800"
+              profile={ai_analysis.childProfile}
+              question={ai_analysis.childQuestion}
+              conclusion={ai_analysis.childConclusion}
+            />
+          </div>
         </div>
-
-        {/* Debug Information (only show if needed) */}
-        {process.env.NODE_ENV === 'development' && (
-          <Card className="shadow-lg bg-white/80 backdrop-blur-sm mt-6">
-            <CardHeader>
-              <CardTitle className="text-lg text-gray-800">Debug: Raw Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="text-xs text-gray-600 whitespace-pre-wrap">
-                {JSON.stringify(ai_analysis, null, 2)}
-              </pre>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Analysis Status Loading Indicator */}
         {analysisStatus === 'loading' && (
