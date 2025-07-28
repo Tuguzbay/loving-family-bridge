@@ -133,7 +133,7 @@ Return only valid JSON.`;
         'X-Title': 'Family Assessment App', // Optional: for analytics
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet:beta',
+        model: 'qwen/qwen-2.5-7b-instruct:free',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
