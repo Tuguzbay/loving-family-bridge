@@ -118,7 +118,7 @@ const Index = () => {
             transition={{ delay: 0.2 }}
           >
             <p className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
-              ➤ "Reconnect ends the illusion and starts real understanding."
+              ➤ "FamilyConnect ends the illusion and starts real understanding."
             </p>
           </motion.div>
         </motion.div>
