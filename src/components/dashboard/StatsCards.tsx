@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, BarChart3, Copy, Check } from "lucide-react";
+import { Users, Copy, Check, Heart, UserCheck } from "lucide-react";
 import { useFamilyCodeCopy } from "@/hooks/useFamilyCodeCopy";
 
 interface StatsCardsProps {
@@ -62,14 +62,29 @@ export const StatsCards = ({ family, familyMembers, conversationProgress, isChil
       <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-gray-600">
-            Progress
+            Family Connection
           </CardTitle>
-          <BarChart3 className="h-4 w-4 text-purple-600" />
+          <Heart className="h-4 w-4 text-pink-600" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-gray-800">{conversationProgress}%</div>
-          <p className="text-xs text-gray-500 mt-2">
-            Conversation progress
+          <div className="flex items-center justify-center space-x-1 py-2">
+            {/* Happy Family Animation */}
+            <div className="flex items-center space-x-2 animate-pulse">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <UserCheck className="h-4 w-4 text-blue-600" />
+              </div>
+              <Heart className="h-3 w-3 text-pink-500 animate-bounce" style={{ animationDelay: '0.1s' }} />
+              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                <UserCheck className="h-4 w-4 text-purple-600" />
+              </div>
+              <Heart className="h-3 w-3 text-pink-500 animate-bounce" style={{ animationDelay: '0.2s' }} />
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                <UserCheck className="h-4 w-4 text-green-600" />
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            Building stronger connections
           </p>
         </CardContent>
       </Card>
