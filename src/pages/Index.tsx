@@ -73,7 +73,7 @@ const Index = () => {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"> Parents & Children</span>
           </motion.h1>
           <motion.p
-            className="text-2xl text-gray-900 mb-8 leading-relaxed font-bold drop-shadow-lg bg-white/60 backdrop-blur-md rounded-xl px-6 py-4 border border-white/30"
+            className="text-2xl text-gray-900 mb-8 leading-relaxed font-bold drop-shadow-lg"
             initial={shouldReduceMotion ? undefined : "hidden"}
             animate={shouldReduceMotion ? undefined : "visible"}
             variants={fadeUp}
