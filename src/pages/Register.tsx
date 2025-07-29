@@ -121,8 +121,8 @@ const Register = () => {
                 >
                   <User className="h-6 w-6 text-blue-600 mr-3 flex-shrink-0" />
                   <div className="text-left">
-                    <div className="font-semibold">I'm a Parent</div>
-                    <div className="text-sm text-gray-600">Create a family account and invite your child</div>
+                    <div className="font-semibold text-sm sm:text-base">I'm a Parent</div>
+                    <div className="text-xs sm:text-sm text-gray-600">Create a family account and invite your child</div>
                   </div>
                 </Button>
                 <Button
@@ -132,8 +132,8 @@ const Register = () => {
                 >
                   <Baby className="h-6 w-6 text-green-600 mr-3 flex-shrink-0" />
                   <div className="text-left">
-                    <div className="font-semibold">I'm a Child/Teen</div>
-                    <div className="text-sm text-gray-600">Join my parent's family account</div>
+                    <div className="font-semibold text-sm sm:text-base">I'm a Child/Teen</div>
+                    <div className="text-xs sm:text-sm text-gray-600">Join my parent's family account</div>
                   </div>
                 </Button>
                 <div className="text-center pt-4">

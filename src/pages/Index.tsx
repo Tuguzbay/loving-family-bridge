@@ -35,14 +35,14 @@ const Index = () => {
           <Heart className="h-8 w-8 text-blue-600 drop-shadow-lg" />
           <span className="text-2xl font-extrabold text-gray-900 tracking-tight">FamilyConnect</span>
         </div>
-        <div className="space-x-4">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
           <Link to="/login">
-            <Button variant="ghost" className="text-gray-700 hover:text-blue-600 font-semibold">
+            <Button variant="ghost" className="text-gray-700 hover:text-blue-600 font-semibold w-full sm:w-auto">
               Sign In
             </Button>
           </Link>
           <Link to="/register">
-            <Button className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white font-bold shadow-lg">
+            <Button className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white font-bold shadow-lg w-full sm:w-auto">
               Get Started
             </Button>
           </Link>
@@ -89,9 +89,10 @@ const Index = () => {
             transition={{ delay: 0.4, duration: 0.7 }}
           >
             <Link to="/register">
-              <Button size="lg" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white px-10 py-5 text-2xl font-bold shadow-xl rounded-full">
-                Start Your Journey
-                <ArrowRight className="ml-2 h-6 w-6" />
+              <Button size="lg" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white px-6 sm:px-10 py-5 text-lg sm:text-2xl font-bold shadow-xl rounded-full">
+                <span className="hidden sm:inline">Start Your Journey</span>
+                <span className="sm:hidden">Start</span>
+                <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
               </Button>
             </Link>
           </motion.div>
@@ -207,9 +208,10 @@ const Index = () => {
           <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Ready to Strengthen Your Family Bond?</h2>
           <p className="text-2xl text-gray-700 mb-8">Join thousands of families who are already communicating better.</p>
           <Link to="/register">
-            <Button size="lg" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white px-10 py-5 text-2xl font-bold shadow-xl rounded-full">
-              Start Your Journey
-              <ArrowRight className="ml-2 h-6 w-6" />
+            <Button size="lg" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white px-6 sm:px-10 py-5 text-lg sm:text-2xl font-bold shadow-xl rounded-full">
+              <span className="hidden sm:inline">Start Your Journey</span>
+              <span className="sm:hidden">Start</span>
+              <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
             </Button>
           </Link>
         </motion.div>

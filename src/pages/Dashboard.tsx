@@ -249,8 +249,9 @@ const Dashboard = () => {
           )}
         </div>
         <div className="space-x-4">
-          <Button onClick={handleSignOut} className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white font-bold shadow-lg rounded-full px-6 py-2">
-            <LogOut className="h-5 w-5 mr-2" /> Sign Out
+          <Button onClick={handleSignOut} className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white font-bold shadow-lg rounded-full px-3 sm:px-6 py-2 text-sm sm:text-base">
+            <LogOut className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" /> 
+            <span className="hidden sm:inline">Sign Out</span>
           </Button>
         </div>
       </motion.nav>
