@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Heart, ArrowLeft } from "lucide-react";
+import { Heart, ArrowLeft, User, Baby } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -116,20 +116,22 @@ const Register = () => {
               <CardContent className="space-y-4">
                 <Button
                   onClick={() => handleUserTypeSelect("parent")}
-                  className="w-full h-16 text-left bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 text-gray-800"
+                  className="w-full h-16 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 text-gray-800 flex items-center justify-start"
                   variant="outline"
                 >
-                  <div>
+                  <User className="h-6 w-6 text-blue-600 mr-3 flex-shrink-0" />
+                  <div className="text-left">
                     <div className="font-semibold">I'm a Parent</div>
                     <div className="text-sm text-gray-600">Create a family account and invite your child</div>
                   </div>
                 </Button>
                 <Button
                   onClick={() => handleUserTypeSelect("child")}
-                  className="w-full h-16 text-left bg-green-50 hover:bg-green-100 border-2 border-green-200 text-gray-800"
+                  className="w-full h-16 bg-green-50 hover:bg-green-100 border-2 border-green-200 text-gray-800 flex items-center justify-start"
                   variant="outline"
                 >
-                  <div>
+                  <Baby className="h-6 w-6 text-green-600 mr-3 flex-shrink-0" />
+                  <div className="text-left">
                     <div className="font-semibold">I'm a Child/Teen</div>
                     <div className="text-sm text-gray-600">Join my parent's family account</div>
                   </div>
