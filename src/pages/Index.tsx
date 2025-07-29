@@ -29,19 +29,19 @@ const Index = () => {
         initial={shouldReduceMotion ? undefined : "hidden"}
         animate={shouldReduceMotion ? undefined : "visible"}
         variants={fadeUp}
-        className="flex justify-between items-center p-6 bg-white/70 backdrop-blur-xl border-b border-blue-100 shadow-md z-10 relative"
+        className="flex flex-col sm:flex-row justify-between items-center p-4 sm:p-6 bg-white/70 backdrop-blur-xl border-b border-blue-100 shadow-md z-10 relative space-y-4 sm:space-y-0"
       >
         <div className="flex items-center space-x-2">
-          <Heart className="h-8 w-8 text-blue-600 drop-shadow-lg" />
-          <span className="text-2xl font-extrabold text-gray-900 tracking-tight">FamilyConnect</span>
+          <Heart className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 drop-shadow-lg" />
+          <span className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">FamilyConnect</span>
         </div>
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-          <Link to="/login">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
+          <Link to="/login" className="w-full sm:w-auto">
             <Button variant="ghost" className="text-gray-700 hover:text-blue-600 font-semibold w-full sm:w-auto">
               Sign In
             </Button>
           </Link>
-          <Link to="/register">
+          <Link to="/register" className="w-full sm:w-auto">
             <Button className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white font-bold shadow-lg w-full sm:w-auto">
               Get Started
             </Button>

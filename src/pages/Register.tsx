@@ -122,7 +122,10 @@ const Register = () => {
                   <User className="h-6 w-6 text-blue-600 mr-3 flex-shrink-0" />
                   <div className="text-left">
                     <div className="font-semibold text-sm sm:text-base">I'm a Parent</div>
-                    <div className="text-xs sm:text-sm text-gray-600">Create a family account and invite your child</div>
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      <span className="sm:hidden">Create a family account</span>
+                      <span className="hidden sm:inline">Create a family account and invite your child</span>
+                    </div>
                   </div>
                 </Button>
                 <Button
