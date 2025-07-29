@@ -212,31 +212,18 @@ const Register = () => {
                     </div>
                   )}
                   {userType === "child" && (
-                    <>
-                      <div>
-                        <Label htmlFor="age">Your Age</Label>
-                        <Input
-                          id="age"
-                          type="number"
-                          value={formData.age}
-                          onChange={(e) => handleInputChange("age", e.target.value)}
-                          placeholder="Enter your age"
-                          min={6}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="familyCode">Family Code</Label>
-                        <Input
-                          id="familyCode"
-                          type="text"
-                          value={formData.familyCode}
-                          onChange={(e) => handleInputChange("familyCode", e.target.value)}
-                          placeholder="Enter your family code (from your parent)"
-                          required
-                        />
-                      </div>
-                    </>
+                    <div>
+                      <Label htmlFor="age">Your Age</Label>
+                      <Input
+                        id="age"
+                        type="number"
+                        value={formData.age}
+                        onChange={(e) => handleInputChange("age", e.target.value)}
+                        placeholder="Enter your age"
+                        min={6}
+                        required
+                      />
+                    </div>
                   )}
                   <Button
                     type="submit"
