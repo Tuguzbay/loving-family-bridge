@@ -37,12 +37,12 @@ const Index = () => {
         </div>
         <div className="space-x-2 sm:space-x-4">
           <Link to="/login">
-            <Button variant="ghost" className="text-gray-700 hover:text-blue-600 font-semibold text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2">
+            <Button variant="ghost" className="text-gray-700 hover:text-blue-600 font-semibold text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2 hover:scale-105 transition-all duration-200">
               Sign In
             </Button>
           </Link>
           <Link to="/register">
-            <Button className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white font-bold shadow-lg text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2">
+            <Button className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white font-bold shadow-lg text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2 hover:scale-105 transition-all duration-200">
               Get Started
             </Button>
           </Link>
@@ -89,7 +89,7 @@ const Index = () => {
             transition={{ delay: 0.4, duration: 0.7 }}
           >
             <Link to="/register">
-              <Button size="lg" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white px-6 sm:px-10 py-5 text-lg sm:text-2xl font-bold shadow-xl rounded-full">
+              <Button size="lg" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white px-6 sm:px-10 py-5 text-lg sm:text-2xl font-bold shadow-xl rounded-full hover:scale-105 transition-all duration-300">
                 <span className="hidden sm:inline">Start Your Journey</span>
                 <span className="sm:hidden">Start</span>
                 <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
@@ -100,7 +100,7 @@ const Index = () => {
 
         {/* Quote Section */}
         <motion.div
-          className="text-center max-w-4xl mx-auto mb-16 px-8 py-12 bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-blue-100"
+          className="text-center max-w-4xl mx-auto mb-16 px-8 py-12 bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-blue-100 hover:scale-105 hover:shadow-2xl transition-all duration-300 cursor-pointer"
           initial={shouldReduceMotion ? undefined : "hidden"}
           whileInView={shouldReduceMotion ? undefined : "visible"}
           viewport={{ once: true, amount: 0.3 }}
@@ -134,7 +134,7 @@ const Index = () => {
               viewport={{ once: true, amount: 0.3 }}
               variants={fadeUp}
             >
-              <Card className="border-0 shadow-2xl bg-white/60 backdrop-blur-2xl hover:shadow-3xl transition-all duration-300 rounded-3xl">
+              <Card className="border-0 shadow-2xl bg-white/60 backdrop-blur-2xl hover:shadow-3xl hover:scale-105 transition-all duration-300 rounded-3xl cursor-pointer">
                 <CardHeader className="text-center pb-4">
                   <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 shadow-lg ${i === 0 ? 'bg-blue-200' : i === 1 ? 'bg-green-200' : 'bg-purple-200'}`}>
                     {i === 0 && <MessageCircle className="h-8 w-8 text-blue-600" />}
@@ -177,7 +177,7 @@ const Index = () => {
                 viewport={{ once: true, amount: 0.3 }}
                 variants={fadeUp}
               >
-                <div className="text-center">
+                <div className="text-center hover:scale-105 transition-all duration-300 cursor-pointer">
                   <div className="w-14 h-14 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold shadow-lg">{i + 1}</div>
                   <h3 className="font-semibold text-gray-900 mb-2 text-lg">
                     {i === 0 && "Register Together"}
@@ -199,7 +199,7 @@ const Index = () => {
 
         {/* CTA Section */}
         <motion.div
-          className="text-center bg-white/70 backdrop-blur-2xl rounded-3xl p-16 shadow-2xl z-10 relative border border-blue-100"
+          className="text-center bg-white/70 backdrop-blur-2xl rounded-3xl p-16 shadow-2xl z-10 relative border border-blue-100 hover:scale-105 hover:shadow-3xl transition-all duration-300 cursor-pointer"
           initial={shouldReduceMotion ? undefined : "hidden"}
           whileInView={shouldReduceMotion ? undefined : "visible"}
           viewport={{ once: true, amount: 0.3 }}
@@ -208,7 +208,7 @@ const Index = () => {
           <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Ready to Strengthen Your Family Bond?</h2>
           <p className="text-2xl text-gray-700 mb-8">Join thousands of families who are already communicating better.</p>
           <Link to="/register">
-            <Button size="lg" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white px-6 sm:px-10 py-5 text-lg sm:text-2xl font-bold shadow-xl rounded-full">
+            <Button size="lg" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white px-6 sm:px-10 py-5 text-lg sm:text-2xl font-bold shadow-xl rounded-full hover:scale-105 transition-all duration-300">
               <span className="hidden sm:inline">Start Your Journey</span>
               <span className="sm:hidden">Start</span>
               <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
