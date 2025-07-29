@@ -97,6 +97,32 @@ const Index = () => {
           </motion.div>
         </motion.div>
 
+        {/* Quote Section */}
+        <motion.div
+          className="text-center max-w-4xl mx-auto mb-16 px-8 py-12 bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-blue-100"
+          initial={shouldReduceMotion ? undefined : "hidden"}
+          whileInView={shouldReduceMotion ? undefined : "visible"}
+          viewport={{ once: true, amount: 0.3 }}
+          variants={fadeUp}
+        >
+          <blockquote className="text-2xl font-medium text-gray-800 mb-4 italic leading-relaxed">
+            "The single biggest problem in communication is the illusion that it has taken place."
+          </blockquote>
+          <cite className="text-lg text-gray-600 font-semibold">— George Bernard Shaw</cite>
+          <motion.div 
+            className="mt-6 pt-6 border-t border-blue-200"
+            initial={shouldReduceMotion ? undefined : "hidden"}
+            whileInView={shouldReduceMotion ? undefined : "visible"}
+            viewport={{ once: true, amount: 0.3 }}
+            variants={fadeUp}
+            transition={{ delay: 0.2 }}
+          >
+            <p className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+              ➤ "Reconnect ends the illusion and starts real understanding."
+            </p>
+          </motion.div>
+        </motion.div>
+
         {/* Features Grid */}
         <div className="grid md:grid-cols-3 gap-10 mb-20">
           {[0, 1, 2].map((i) => (
