@@ -29,20 +29,20 @@ const Index = () => {
         initial={shouldReduceMotion ? undefined : "hidden"}
         animate={shouldReduceMotion ? undefined : "visible"}
         variants={fadeUp}
-        className="flex flex-col sm:flex-row justify-between items-center p-4 sm:p-6 bg-white/70 backdrop-blur-xl border-b border-blue-100 shadow-md z-10 relative space-y-4 sm:space-y-0"
+        className="flex justify-between items-center p-4 sm:p-6 bg-white/70 backdrop-blur-xl border-b border-blue-100 shadow-md z-10 relative"
       >
         <div className="flex items-center space-x-2">
           <Heart className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 drop-shadow-lg" />
-          <span className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">FamilyConnect</span>
+          <span className="text-lg sm:text-2xl font-extrabold text-gray-900 tracking-tight">FamilyConnect</span>
         </div>
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-          <Link to="/login" className="w-full sm:w-auto">
-            <Button variant="ghost" className="text-gray-700 hover:text-blue-600 font-semibold w-full sm:w-auto">
+        <div className="space-x-2 sm:space-x-4">
+          <Link to="/login">
+            <Button variant="ghost" className="text-gray-700 hover:text-blue-600 font-semibold text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2">
               Sign In
             </Button>
           </Link>
-          <Link to="/register" className="w-full sm:w-auto">
-            <Button className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white font-bold shadow-lg w-full sm:w-auto">
+          <Link to="/register">
+            <Button className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white font-bold shadow-lg text-sm sm:text-base px-2 sm:px-4 py-1 sm:py-2">
               Get Started
             </Button>
           </Link>
